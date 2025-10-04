@@ -1,0 +1,22 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+env/
+venv/
+ENV/
+.venv/
+
+# Django
+db.sqlite3
+*.log
+*.pot
+*.py[cod]
+
+# IDEs
+.vscode/
+.idea/
+
+# Node (si más adelante agregas React)
+node_modules/
