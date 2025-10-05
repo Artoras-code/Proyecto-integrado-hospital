@@ -1,2 +1,3 @@
-# Proyecto-integrado-hospital
+## Proyecto-integrado-hospital
 # Vicente Torres
+# Javier Baquedano
