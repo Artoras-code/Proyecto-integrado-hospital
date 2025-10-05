@@ -1,8 +1,9 @@
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 
-@login_required
+
 def dashboard_view(request):
-    return render(request, "dashboard/dashboard.html", {
-        "user": request.user
-    })
+    return render(request, "dashboard/dashboard.html")
+
+
+def vista_dashboard_usuario(request):
+    return render(request, 'dashboard/dashboard_usuario.html')
