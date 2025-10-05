@@ -20,3 +20,6 @@ db.sqlite3
 
 # Node (si más adelante agregas React)
 node_modules/
+
+# credenciales
+*.env
