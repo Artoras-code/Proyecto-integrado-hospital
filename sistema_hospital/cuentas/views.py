@@ -1,30 +1,22 @@
 from django.shortcuts import render, redirect
-from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.decorators import login_required
+from .models import CustomUser
 from django.contrib.auth import logout
-from cuentas.models import Usuario
 
-# Creacion de otra vista
-
-
-#funcionalidad de login
-
-def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        try:
-            usuario = Usuario.objects.get(username=username, password=password)
-            if usuario.username == "administrador":
-                return redirect("dashboard_admin")
-            else:
-                return redirect("dashboard_usuario")
-        except Usuario.DoesNotExist:
-            messages.error(request, "Username o contraseña incorrectos")
-
-    return render(request, "cuentas/login.html")
+class CustomLoginView(LoginView):
+    template_name = 'cuentas/login.html'
+class CustomLogoutView(LogoutView):
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return redirect('cuentas:login')
 
 
-def logout_view(request):
-    logout(request)
-    return redirect('login')
+@login_required
+def redirect_view(request):
+    if request.user.rol == CustomUser.ADMIN:
+        return redirect('dashboard:dashboard_admin')
+    elif request.user.rol == CustomUser.USUARIO:
+        return redirect('dashboard:dashboard_usuario')
+    else:
+        return redirect('cuentas:login')

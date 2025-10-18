@@ -31,7 +31,12 @@
 <body>
     <header>
         <h2>🏥 Sistema Hospitalario</h2>
-        <a href="{% url 'logout' %}" class="logout">Cerrar sesión</a>
+        <form action="{% url 'cuentas:logout' %}" method="post" style="display: inline; float: right;">
+    {% csrf_token %}
+    <button type="submit" class="logout" style="background:none; border:none; color:white; cursor:pointer; text-decoration: none; font-size: 1em;">
+        Cerrar sesión
+    </button>
+</form>
     </header>
     <div class="container">
         <h3>Bienvenido, {{ user.username }} 👋</h3>
