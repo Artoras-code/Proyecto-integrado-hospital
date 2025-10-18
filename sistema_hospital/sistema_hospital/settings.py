@@ -105,6 +105,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = 'cuentas.CustomUser'
+
+LOGIN_REDIRECT_URL = 'cuentas:redirect'
+
+LOGOUT_REDIRECT_URL = 'cuentas:login'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
