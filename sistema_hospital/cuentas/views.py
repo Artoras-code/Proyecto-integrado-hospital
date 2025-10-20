@@ -1,30 +1,24 @@
 from django.shortcuts import render, redirect
-from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import CustomUser
 from django.contrib.auth import logout
-from cuentas.models import Usuario
+from django_otp import devices_for_user 
 
-# Creacion de otra vista
+@login_required
+def redirect_view(request):
+    user = request.user
 
+    if not list(devices_for_user(user)):
 
-#funcionalidad de login
+        return redirect('two_factor:setup')
+    
+    if not request.user.is_verified():
+        return redirect('two_factor:login')
 
-def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        try:
-            usuario = Usuario.objects.get(username=username, password=password)
-            if usuario.username == "administrador":
-                return redirect("dashboard_admin")
-            else:
-                return redirect("dashboard_usuario")
-        except Usuario.DoesNotExist:
-            messages.error(request, "Username o contraseña incorrectos")
-
-    return render(request, "cuentas/login.html")
-
-
-def logout_view(request):
-    logout(request)
-    return redirect('login')
+    if user.rol == CustomUser.ADMIN:
+        return redirect('dashboard:dashboard_admin')
+    elif user.rol == CustomUser.USUARIO:
+        return redirect('dashboard:dashboard_usuario')
+    else:
+        logout(request)
+        return redirect('two_factor:login')

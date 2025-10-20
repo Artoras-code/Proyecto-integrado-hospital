@@ -1,0 +1,77 @@
+{# cuentas/templates/two_factor/profile/profile.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n two_factor_tags %}
+
+{% block title %}{% trans "Seguridad de la Cuenta" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+        <h1>{% block page_title %}{% trans "Seguridad de la Cuenta" %}{% endblock %}</h1>
+    </div>
+
+    {# Comprueba si el usuario tiene algún dispositivo 2FA configurado #}
+    {% if default_device %}
+        {# Muestra información sobre el método principal #}
+        <h4>{% trans "Método Principal" %}</h4>
+        {% if default_device_type == 'TOTPDevice' %}
+            <p class="text-muted">{% trans "Los códigos son generados por tu aplicación de autenticación (ej. Google Authenticator)." %}</p>
+        {% elif default_device_type == 'PhoneDevice' %}
+            <p class="text-muted">{% blocktrans with primary=default_device|device_action %}Método principal: {{ primary }}{% endblocktrans %}</p>
+        {% elif default_device_type == 'RemoteYubikeyDevice' %}
+             <p class="text-muted">{% blocktrans %}Los códigos serán generados por tu YubiKey.{% endblocktrans %}</p>
+        {% else %}
+             <p class="text-muted">{% blocktrans %}Tienes un método de autenticación activo.{% endblocktrans %}</p>
+        {% endif %}
+
+        <hr class="my-4">
+
+        {# Sección de Códigos de Respaldo #}
+        <h4>{% trans "Códigos de Respaldo" %}</h4>
+        <p class="text-muted">
+            {% blocktrans trimmed %}Si no tienes acceso a tu dispositivo principal, puedes usar un código de respaldo para ingresar.{% endblocktrans %}
+            <br>
+            {% blocktrans count counter=backup_tokens %}
+                Te queda 1 código de respaldo.
+            {% plural %}
+                Te quedan {{ counter }} códigos de respaldo.
+            {% endblocktrans %}
+        </p>
+        {# Enlace a la página para ver/generar códigos #}
+        <a href="{% url 'two_factor:backup_tokens' %}" class="btn btn-info btn-sm mb-3">
+            {% trans "Mostrar/Generar Códigos" %}
+        </a>
+
+        <hr class="my-4">
+
+        {# Sección para Deshabilitar 2FA #}
+        <h4>{% trans "Deshabilitar Verificación en Dos Pasos" %}</h4>
+        <p class="text-muted">{% blocktrans trimmed %}Si deshabilitas esta función, tu cuenta será menos segura. No lo recomendamos.{% endblocktrans %}</p>
+        {# Enlace a la página de deshabilitación #}
+        <a class="btn btn-danger btn-sm" href="{% url 'two_factor:disable' %}">
+            {% trans "Deshabilitar Verificación en Dos Pasos" %}
+        </a>
+
+    {% else %}
+        {# Mensaje si 2FA no está habilitado #}
+        <div class="alert alert-warning text-center" role="alert">
+            {% blocktrans trimmed %}La verificación en dos pasos no está activada para tu cuenta.{% endblocktrans %}
+        </div>
+        <p class="text-center text-muted">{% blocktrans trimmed %}Actívala para añadir una capa extra de seguridad.{% endblocktrans %}</p>
+        <div class="d-grid gap-2 col-8 mx-auto mt-4">
+             {# Enlace a la página de configuración inicial #}
+            <a href="{% url 'two_factor:setup' %}" class="btn btn-primary">
+                {% trans "Activar Verificación en Dos Pasos" %}
+            </a>
+        </div>
+    {% endif %}
+
+    <hr class="my-4">
+
+    {# Enlace para volver al dashboard principal #}
+    <div class="text-center mt-4">
+        <a href="{% url 'cuentas:redirect' %}" class="btn btn-outline-secondary btn-sm">
+            {% trans "Volver al Panel Principal" %}
+        </a>
+    </div>
+
+{% endblock %}

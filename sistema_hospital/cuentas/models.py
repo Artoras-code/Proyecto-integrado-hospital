@@ -1,10 +1,16 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-# Create your models here.
-
-class Usuario(models.Model):
-    username = models.CharField(max_length=100)
-    password = models.CharField(max_length=100)
+class CustomUser(AbstractUser):
+    
+    ADMIN = 'admin'
+    USUARIO = 'usuario'
+    
+    ROL_CHOICES = (
+        (ADMIN, 'Administrador'),
+        (USUARIO, 'Usuario'),
+    )
+    rol = models.CharField(max_length=10, choices=ROL_CHOICES, default=USUARIO)
 
     def __str__(self):
         return self.username

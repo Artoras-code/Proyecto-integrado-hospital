@@ -1,0 +1,54 @@
+{# cuentas/templates/two_factor/profile/disable.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n %}
+{% load cuentas_tags %} {# Carga tu filtro #}
+
+{% block title %}{% trans "Deshabilitar Verificación en Dos Pasos" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+        <h1>{% block page_title %}{% trans "Deshabilitar Verificación en Dos Pasos" %}{% endblock %}</h1>
+    </div>
+
+    <p class="alert alert-danger text-center">{% blocktrans trimmed %}
+        Estás a punto de deshabilitar la verificación en dos pasos. Esto reducirá significativamente la seguridad de tu cuenta. ¿Estás seguro?
+    {% endblocktrans %} 😟</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+         {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# El formulario 'form' usualmente pide la contraseña actual #}
+        {% for field in form %}
+             <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                 {{ field|add_classes:'form-control' }}
+                 {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+                 {% endif %}
+                 {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        {# Botón de confirmación (peligroso) #}
+        <button class="btn btn-danger mt-3" type="submit">
+            {% trans "Sí, deshabilitar" %}
+        </button>
+    </form>
+
+    {# Enlace para cancelar y volver a la página principal de seguridad #}
+    <div class="text-center mt-4">
+        <a href="{% url 'two_factor:profile' %}" class="btn btn-outline-secondary btn-sm">
+            {% trans "Cancelar y volver a Seguridad" %}
+        </a>
+    </div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{# cuentas/templates/two_factor/core/setup_complete.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Configuración Completada" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+        <h1>{% block page_title %}{% trans "¡Autenticación Activada!" %}{% endblock %}</h1>
+    </div>
+
+    <div class="text-center">
+        <p class="lead mb-4">{% blocktrans trimmed %}¡Felicitaciones! Has activado exitosamente la autenticación de dos factores para tu cuenta.{% endblocktrans %} 👍</p>
+
+
+        <p>{% blocktrans trimmed %}Ahora puedes gestionar tus métodos de autenticación y códigos de respaldo desde tu perfil de seguridad.{% endblocktrans %}</p>
+
+        <div class="d-grid gap-2 col-8 mx-auto mt-4"> {# Centramos el botón #}
+
+            <a href="{% url 'two_factor:profile' %}" class="btn btn-primary">
+                {% trans "Ir a Seguridad de la Cuenta" %}
+            </a>
+
+             <a href="{% url 'cuentas:redirect' %}" class="btn btn-outline-secondary mt-2">
+                {% trans "Ir al Panel Principal" %}
+             </a>
+        </div>
+    </div>
+{% endblock %}
