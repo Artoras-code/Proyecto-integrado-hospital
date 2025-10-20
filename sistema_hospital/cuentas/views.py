@@ -17,7 +17,9 @@ def redirect_view(request):
 
     if user.rol == CustomUser.ADMIN:
         return redirect('dashboard:dashboard_admin')
-    elif user.rol == CustomUser.USUARIO:
+    elif user.rol == CustomUser.SUPERVISOR:
+        return redirect('dashboard:dashboard_usuario')
+    elif user.rol == CustomUser.DOCTOR or user.rol == CustomUser.ENFERMERO:
         return redirect('dashboard:dashboard_usuario')
     else:
         logout(request)
