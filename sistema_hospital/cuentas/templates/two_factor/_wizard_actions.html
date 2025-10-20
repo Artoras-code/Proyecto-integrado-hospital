@@ -1,0 +1,16 @@
+{# cuentas/templates/two_factor/_wizard_actions.html (Con texto condicional) #}
+{% load i18n %}
+
+{# Botón Principal con texto dinámico #}
+<button type="submit" class="btn btn-primary">
+    {% if wizard.steps.current == 'auth' %}
+        {# Texto para el primer paso (usuario/contraseña) #}
+        {% trans "Iniciar Sesión" %}
+    {% elif wizard.steps.current == 'token' or wizard.steps.current == 'backup' %}
+        {# Texto para los pasos de verificación (token, backup) #}
+        {% trans "Verificar" %}
+    {% else %}
+        {# Texto por defecto para otros pasos (ej. setup) #}
+        {% trans "Siguiente" %}
+    {% endif %}
+</button>

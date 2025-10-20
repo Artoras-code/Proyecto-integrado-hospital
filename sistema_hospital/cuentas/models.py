@@ -8,7 +8,7 @@ class CustomUser(AbstractUser):
     
     ROL_CHOICES = (
         (ADMIN, 'Administrador'),
-        (USUARIO, 'Usuario'), # Este es el rol "Matrona"
+        (USUARIO, 'Usuario'),
     )
     rol = models.CharField(max_length=10, choices=ROL_CHOICES, default=USUARIO)
 

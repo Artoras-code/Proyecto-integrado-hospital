@@ -1,0 +1,49 @@
+{# cuentas/templates/two_factor/core/backup_tokens.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Códigos de Respaldo" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+        <h1>{% block page_title %}{% trans "Códigos de Respaldo" %}{% endblock %}</h1>
+    </div>
+
+    <p class="text-center text-muted mb-4">{% blocktrans trimmed %}
+        Guarda estos códigos en un lugar seguro. Puedes usarlos para acceder a tu cuenta si no tienes acceso a tu método principal de autenticación. Cada código solo puede usarse una vez.
+    {% endblocktrans %}</p>
+
+    {# Muestra los códigos existentes si los hay #}
+    {% if device.token_set.count %}
+        <ul class="list-group list-group-flush mb-4 text-center backup-token-list">
+        {% for token in device.token_set.all %}
+            <li class="list-group-item">{{ token.token }}</li>
+        {% endfor %}
+        </ul>
+         <p class="text-center small text-muted">{% blocktrans %}Imprime o anota estos códigos.{% endblocktrans %}</p>
+    {% else %}
+         <p class="text-center alert alert-info">{% trans "Aún no has generado códigos de respaldo." %}</p>
+    {% endif %}
+
+    <hr class="my-4">
+
+    {# Formulario para generar nuevos códigos #}
+    <form method="post" class="text-center">
+        {% csrf_token %}
+        {# El formulario 'form' usualmente está vacío, solo necesitamos el botón #}
+        {{ form }}
+
+        {# Botón para generar nuevos códigos #}
+        <button class="btn btn-primary mt-3" type="submit">
+            {% trans "Generar Nuevos Códigos de Respaldo" %}
+        </button>
+         <p class="small text-muted mt-2">{% blocktrans %}Generar nuevos códigos invalidará los anteriores.{% endblocktrans %}</p>
+    </form>
+
+    {# Enlace para volver a la página principal de seguridad #}
+    <div class="text-center mt-4">
+        <a href="{% url 'two_factor:profile' %}" class="btn btn-outline-secondary btn-sm">
+            {% trans "Volver a Seguridad de la Cuenta" %}
+        </a>
+    </div>
+{% endblock %}

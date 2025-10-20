@@ -1,0 +1,69 @@
+{# cuentas/templates/two_factor/core/login.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n two_factor_tags %}
+{% load cuentas_tags %} 
+
+{% block title %}{% trans "Iniciar Sesión" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+         <h1>{% block page_title %}{% trans "Iniciar Sesión" %}{% endblock %}</h1>
+    </div>
+
+    {% if wizard.steps.current == 'auth' %}
+        <p class="text-center text-muted mb-3">{% blocktrans %}Ingresa tu usuario y contraseña.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'token' %}
+         <h1 class="h3 text-center mb-3">{% trans "Verificación en Dos Pasos" %}</h1>
+        {% if device.method == 'call' %}
+            <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Te estamos llamando al número asociado. Ingresa los dígitos que escuches.{% endblocktrans %}</p>
+        {% elif device.method == 'sms' %}
+            <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Te enviamos un código por SMS al número asociado. Ingrésalo a continuación.{% endblocktrans %}</p>
+        {% elif device.method == 'totp' %}
+             <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Ingresa el código de 6 dígitos generado por tu aplicación de autenticación (ej. Google Authenticator).{% endblocktrans %}</p>
+        {% else %}
+             <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Ingresa el código de tu dispositivo de autenticación.{% endblocktrans %}</p>
+        {% endif %}
+    {% elif wizard.steps.current == 'backup' %}
+         {# Este paso no debería alcanzarse si eliminamos el botón, pero lo dejamos por si acaso #}
+         <h1 class="h3 text-center mb-3">{% trans "Usar Código de Respaldo" %}</h1>
+         <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Ingresa uno de tus códigos de respaldo que no hayas utilizado previamente.{% endblocktrans %}</p>
+    {% endif %}
+
+    <form action="" method="post" novalidate>
+        {% csrf_token %}
+        {{ wizard.management_form }}
+
+         {% if wizard.form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in wizard.form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% for field in wizard.form %}
+            <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                 {{ field|add_classes:'form-control' }} {# Usando el filtro add_classes #}
+                 {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+                 {% endif %}
+                 {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <input type="submit" value="" class="d-none" />
+
+        {# Incluye _wizard_actions simplificado y define el texto del botón #}
+        <div class="button-group mt-4">
+            {% include "two_factor/_wizard_actions.html" %}
+        </div>
+
+
+        {# <hr class="my-4"> #}
+
+
+    </form>
+{% endblock %}
