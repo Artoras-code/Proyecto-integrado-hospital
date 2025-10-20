@@ -44,6 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cuentas',
     'dashboard',
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+    'two_factor',
 ]
 
 MIDDLEWARE = [
@@ -52,6 +56,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -107,9 +112,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = 'cuentas.CustomUser'
 
+LOGIN_URL = 'two_factor:login'
 LOGIN_REDIRECT_URL = 'cuentas:redirect'
-
-LOGOUT_REDIRECT_URL = 'cuentas:login'
+LOGOUT_REDIRECT_URL = 'two_factor:login'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

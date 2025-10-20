@@ -1,0 +1,91 @@
+{# cuentas/templates/two_factor/core/setup.html #}
+{% extends "two_factor/_base_two_factor.html" %}
+{% load i18n two_factor_tags %}  
+{% load cuentas_tags %} 
+
+{% block title %}{% trans "Configurar Autenticación de Dos Factores" %}{% endblock %}
+
+{% block content %}
+    <div class="two-factor-header mb-4">
+        <h1>{% block page_title %}{% trans "Activar Autenticación de Dos Factores" %}{% endblock %}</h1>
+    </div>
+
+    {% if wizard.steps.current == 'welcome' %}
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Sigue los pasos de este asistente para mejorar la seguridad de tu cuenta activando la verificación en dos pasos.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'method' %}
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Elige el método de autenticación que prefieres usar.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'generator' %}
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}1. Escanea el código QR con tu aplicación de autenticación (ej. Google Authenticator).{% endblocktrans %}</p>
+        <p class="text-center"><img src="{{ QR_URL }}" alt="Código QR" class="qr-code-img mb-3" /></p>
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}2. Ingresa el código de 6 dígitos generado por la aplicación.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'sms' %}
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Ingresa el número de teléfono donde deseas recibir los códigos SMS. Lo validaremos en el siguiente paso.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'call' %}
+         <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Ingresa el número de teléfono donde deseas recibir la llamada de verificación. Lo validaremos en el siguiente paso.{% endblocktrans %}</p>
+    {% elif wizard.steps.current == 'validation' %}
+        {% if challenge_succeeded %}
+            <p class="text-center text-muted mb-3">
+            {% if device.method == 'call' %}
+                {% blocktrans trimmed %}Te estamos llamando, ingresa los dígitos que escuches.{% endblocktrans %}
+            {% elif device.method == 'sms' %}
+                {% blocktrans trimmed %}Te enviamos un SMS, por favor ingresa el código.{% endblocktrans %}
+            {% endif %}
+            </p>
+        {% else %}
+            <p class="alert alert-warning text-center" role="alert">{% blocktrans trimmed %}Hubo un problema con el método seleccionado. Verifica tu información, intenta de nuevo o elige otro método.{% endblocktrans %}</p>
+        {% endif %}
+    {% elif wizard.steps.current == 'yubikey' %}
+        <p class="text-center text-muted mb-3">{% blocktrans trimmed %}Inserta tu YubiKey y presiona el botón para generar un código en el campo de abajo.{% endblocktrans %}</p>
+    {% endif %}
+
+    <form action="" method="post" novalidate>
+        {% csrf_token %}
+        {{ wizard.management_form }}
+
+         {% if wizard.form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in wizard.form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% for field in wizard.form %}
+            <div class="mb-3">
+                {% if field.name != 'method' or wizard.steps.current != 'method' %}
+                     <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {% endif %}
+
+                {% if field.name == 'method' and wizard.steps.current == 'method' %}
+                    {# Asumiendo que solo TOTP está activo, esto debería mostrar solo esa opción #}
+                    {% for radio in field %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="{{ radio.name }}" id="{{ radio.id_for_label }}" value="{{ radio.choice_value }}" {% if radio.choice_value == field.value or not field.value %}checked{% endif %}> {# Auto-selecciona si solo hay uno #}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                {{ radio.choice_label }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                     {{ field|add_classes:'form-control' }}
+                {% endif %}
+
+                 {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+                 {% endif %}
+                 {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <input type="submit" value="" class="d-none" />
+
+        <div class="button-group mt-4">
+           
+            {% include "two_factor/_wizard_actions.html" %}
+             {% block wizard_action_button_text %}
+             {% endblock %}
+        </div>
+    </form>
+{% endblock %}

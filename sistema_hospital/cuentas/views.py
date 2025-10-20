@@ -1,22 +1,24 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
 from .models import CustomUser
 from django.contrib.auth import logout
-
-class CustomLoginView(LoginView):
-    template_name = 'cuentas/login.html'
-class CustomLogoutView(LogoutView):
-    def get(self, request, *args, **kwargs):
-        logout(request)
-        return redirect('cuentas:login')
-
+from django_otp import devices_for_user 
 
 @login_required
 def redirect_view(request):
-    if request.user.rol == CustomUser.ADMIN:
+    user = request.user
+
+    if not list(devices_for_user(user)):
+
+        return redirect('two_factor:setup')
+    
+    if not request.user.is_verified():
+        return redirect('two_factor:login')
+
+    if user.rol == CustomUser.ADMIN:
         return redirect('dashboard:dashboard_admin')
-    elif request.user.rol == CustomUser.USUARIO:
+    elif user.rol == CustomUser.USUARIO:
         return redirect('dashboard:dashboard_usuario')
     else:
-        return redirect('cuentas:login')
+        logout(request)
+        return redirect('two_factor:login')
