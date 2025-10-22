@@ -142,3 +142,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cerrar sesion despues de 30 minuutos (para modificaciones: EL tiempo va en segundos)
+SESSION_COKIE_AGE = 1300
