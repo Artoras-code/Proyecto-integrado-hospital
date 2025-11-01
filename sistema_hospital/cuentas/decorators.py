@@ -10,9 +10,16 @@ def admin_required(view_func):
     )(view_func)
     return decorated_view_func
 
-def usuario_required(view_func):
+def supervisor_required(view_func):
     decorated_view_func = user_passes_test(
-        lambda u: u.is_active and u.rol == CustomUser.USUARIO,
+        lambda u: u.is_active and u.rol == CustomUser.SUPERVISOR,
+        login_url='two_factor:login' 
+    )(view_func)
+    return decorated_view_func
+
+def clinico_required(view_func):
+    decorated_view_func = user_passes_test(
+        lambda u: u.is_active and u.rol == CustomUser.DOCTOR or u.rol == CustomUser.ENFERMERO,
         login_url='two_factor:login' 
     )(view_func)
     return decorated_view_func
