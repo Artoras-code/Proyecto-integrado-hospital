@@ -1,3 +1,127 @@
 from django.db import models
+from django.conf import settings # Para enlazar al usuario que registra
 
-# Create your models here.
+# --- MODELOS DE PARÁMETROS (Ya existentes) ---
+# Se usan para los menús desplegables del formulario
+
+class TipoParto(models.Model):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Tipo de Parto")
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+class TipoAnalgesia(models.Model):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Tipo de Analgesia")
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+class ComplicacionParto(models.Model):
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Complicación")
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+# --- NUEVOS MODELOS DE REGISTRO CLÍNICO ---
+
+# --- MODELO: Madre (Paciente) ---
+# Almacena la información de la madre
+class Madre(models.Model):
+    rut = models.CharField(max_length=12, unique=True, verbose_name="RUT")
+    nombre = models.CharField(max_length=255, verbose_name="Nombre Completo")
+    fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
+    direccion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dirección")
+    telefono = models.CharField(max_length=15, blank=True, null=True, verbose_name="Teléfono")
+    nacionalidad = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.rut})"
+
+    class Meta:
+        verbose_name = "Madre"
+        verbose_name_plural = "Madres"
+
+
+# --- MODELO: RegistroParto (El Evento) ---
+# Es el "evento" principal que une a la madre, el parto y los recién nacidos.
+class RegistroParto(models.Model):
+    # --- Vínculos ---
+    madre = models.ForeignKey(Madre, on_delete=models.CASCADE, related_name="partos", verbose_name="Madre")
+    # Quién registró esto (Matrona, Supervisor, etc.)
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True,
+        verbose_name="Registrado por"
+    )
+    
+    # --- Datos del Parto (Basado en el Manual REM y Diagrama) ---
+    fecha_parto = models.DateTimeField(verbose_name="Fecha y Hora del Parto")
+    edad_gestacional_semanas = models.PositiveSmallIntegerField(verbose_name="Edad Gestacional (Semanas)")
+    personal_atiende = models.CharField(max_length=255, blank=True, verbose_name="Personal que Atiende")
+
+    # --- Vínculos a Parámetros ---
+    tipo_parto = models.ForeignKey(
+        TipoParto, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True,
+        verbose_name="Tipo de Parto"
+    )
+    tipo_analgesia = models.ForeignKey(
+        TipoAnalgesia,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Tipo de Analgesia"
+    )
+    complicaciones = models.ManyToManyField(
+        ComplicacionParto, 
+        blank=True,
+        verbose_name="Complicaciones"
+    )
+    
+    # --- Datos Adicionales del REM ---
+    uso_oxitocina = models.BooleanField(default=False, verbose_name="Uso de Oxitocina Profiláctica")
+    ligadura_tardia_cordon = models.BooleanField(default=False, verbose_name="Ligadura Tardía de Cordón (>60s)")
+    contacto_piel_a_piel = models.BooleanField(default=False, verbose_name="Contacto Piel a Piel")
+
+    def __str__(self):
+        return f"Parto de {self.madre.rut} el {self.fecha_parto.strftime('%Y-%m-%d')}"
+
+    class Meta:
+        verbose_name = "Registro de Parto"
+        verbose_name_plural = "Registros de Partos"
+        ordering = ['-fecha_parto'] # Ordenar por fecha más reciente por defecto
+
+
+# --- MODELO: RecienNacido ---
+# Almacena los datos del bebé, vinculado al evento del parto
+class RecienNacido(models.Model):
+    SEXO_CHOICES = (
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+        ('I', 'Indeterminado'),
+    )
+
+    # Vínculo al evento de parto
+    parto_asociado = models.ForeignKey(RegistroParto, on_delete=models.CASCADE, related_name="recien_nacidos")
+
+    # --- Datos del RN (Basado en Manual REM y Diagrama) ---
+    sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, verbose_name="Sexo")
+    peso_grs = models.PositiveSmallIntegerField(verbose_name="Peso (gramos)")
+    talla_cm = models.DecimalField(max_digits=4, decimal_places=1, verbose_name="Talla (cm)")
+    apgar_1_min = models.PositiveSmallIntegerField(verbose_name="APGAR al Minuto")
+    apgar_5_min = models.PositiveSmallIntegerField(verbose_name="APGAR a los 5 Minutos")
+    
+    # --- Datos Adicionales del REM ---
+    profilaxis_ocular = models.BooleanField(default=True, verbose_name="Profilaxis Ocular")
+    vacuna_hepatitis_b = models.BooleanField(default=True, verbose_name="Vacuna Hepatitis B")
+
+    def __str__(self):
+        return f"RN de {self.parto_asociado.madre.rut} ({self.peso_grs}g)"
+
+    class Meta:
+        verbose_name = "Recién Nacido"
+        verbose_name_plural = "Recién Nacidos"
