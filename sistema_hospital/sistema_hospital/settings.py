@@ -43,6 +43,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    #APPS API
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+    #APPS
     'cuentas',
     'dashboard',
     'django_otp',
@@ -53,6 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -146,3 +152,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Cerrar sesion despues de 30 minuutos (para modificaciones: EL tiempo va en segundos)
 SESSION_COKIE_AGE = 1300
+
+#Configuracion de Django rest
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+# Config de JWT (Tokens)
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+# Configuración de CORS
+CORS_ALLOW_ALL_ORIGINS = True 
+# O, de forma más segura para el futuro:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173", # Puerto por defecto de Vite
+# 
