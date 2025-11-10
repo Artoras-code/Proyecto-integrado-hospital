@@ -8,6 +8,14 @@ import pandas as pd
 from io import BytesIO
 from django.http import HttpResponse
 
+# --- ¡NUEVAS IMPORTACIONES! ---
+from rest_framework.decorators import action
+from django.utils import timezone
+from auditoria.serializers import SimpleUserSerializer
+from auditoria.mixins import AuditoriaMixin
+
+
+
 # --- 1. Importar TODOS los permisos ---
 from cuentas.permissions import (
     IsSupervisorUser, 
@@ -16,15 +24,17 @@ from cuentas.permissions import (
     IsSupervisorOrClinicoCreateRead
 )
         
-# 2. Importar TODOS los modelos y serializers
+# 2. Importar TODOS los modelos y serializers (¡ACTUALIZADO!)
 from .models import (
     TipoParto, TipoAnalgesia, ComplicacionParto, 
-    Madre, RegistroParto, RecienNacido
+    Madre, RegistroParto, RecienNacido,
+    SolicitudCorreccion # <-- AÑADIDO
 )
 from .serializers import (
     TipoPartoSerializer, TipoAnalgesiaSerializer, ComplicacionPartoSerializer,
     MadreSerializer, RecienNacidoSerializer, 
-    RegistroPartoReadSerializer, RegistroPartoWriteSerializer
+    RegistroPartoReadSerializer, RegistroPartoWriteSerializer,
+    SolicitudCorreccionSerializer # <-- AÑADIDO
 )
 
 # --- VISTAS DE PARÁMETROS (Supervisor=CRUD, Clínico=Lectura) ---
@@ -48,7 +58,7 @@ class ComplicacionPartoViewSet(viewsets.ModelViewSet):
     
 # --- VISTAS DE REGISTRO CLÍNICO ---
 
-class MadreViewSet(viewsets.ModelViewSet):
+class MadreViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar Madres (Pacientes).
     Supervisor: CRUD
@@ -59,7 +69,7 @@ class MadreViewSet(viewsets.ModelViewSet):
     # --- 6. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
-class RecienNacidoViewSet(viewsets.ModelViewSet):
+class RecienNacidoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar Recién Nacidos.
     Supervisor: CRUD
@@ -70,7 +80,7 @@ class RecienNacidoViewSet(viewsets.ModelViewSet):
     # --- 7. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
-class RegistroPartoViewSet(viewsets.ModelViewSet):
+class RegistroPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar TODOS los eventos de Parto.
     SOLO SUPERVISOR.
@@ -84,13 +94,16 @@ class RegistroPartoViewSet(viewsets.ModelViewSet):
         return RegistroPartoWriteSerializer
 
 # --- VISTA "MIS REGISTROS" (SOLO CLÍNICO) ---
-class MisRegistrosViewSet(viewsets.ModelViewSet):
+class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
     """
-    API endpoint para que el personal clínico (Doctor/Enfermero) vea y edite
+    API endpoint para que el personal clínico (Doctor/Enfermero) vea y cree
     ÚNICAMENTE sus propios registros de parto.
     """
     serializer_class = RegistroPartoReadSerializer
     permission_classes = [IsAuthenticated, IsClinicoUser] # <-- Solo Clínico
+
+    # (De PASO 1) - Restringimos los métodos.
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         """
@@ -112,6 +125,75 @@ class MisRegistrosViewSet(viewsets.ModelViewSet):
         Asigna automáticamente el usuario actual como 'registrado_por'.
         """
         serializer.save(registrado_por=self.request.user)
+
+    # --- ¡NUEVA ACCIÓN PARA SOLICITAR CORRECCIÓN! ---
+    @action(detail=True, methods=['post'], permission_classes=[IsClinicoUser])
+    def solicitar_correccion(self, request, pk=None):
+        registro = self.get_object() # Obtiene el registro de 'MisRegistros'
+        mensaje = request.data.get('mensaje', '')
+        
+        # Evitar duplicados
+        if SolicitudCorreccion.objects.filter(registro=registro, estado='pendiente').exists():
+            return Response(
+                {"error": "Ya existe una solicitud pendiente para este registro."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        solicitud = SolicitudCorreccion.objects.create(
+            registro=registro,
+            solicitado_por=request.user,
+            mensaje=mensaje
+        )
+        serializer = SolicitudCorreccionSerializer(solicitud)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def perform_create(self, serializer):
+        """Asigna automáticamente el usuario actual como 'registrado_por'."""
+        # Guardamos la instancia
+        instance = serializer.save(registrado_por=self.request.user)
+        # Llamamos manualmente a la auditoría
+        self.registrar_accion(instance, 'creacion', "Creó un registro desde 'Mis Registros'")
+
+
+# --- ¡NUEVO VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR! ---
+class SolicitudCorreccionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint para que el Supervisor vea y gestione
+    las solicitudes de corrección.
+    """
+    queryset = SolicitudCorreccion.objects.all().order_by('-timestamp_creacion')
+    serializer_class = SolicitudCorreccionSerializer
+    permission_classes = [IsAuthenticated, IsSupervisorUser] # Solo Supervisor
+
+    def get_queryset(self):
+        """
+        Filtra opcionalmente por estado.
+        Ej: /api/dashboard/solicitudes-correccion/?estado=pendiente
+        """
+        qs = super().get_queryset()
+        estado = self.request.query_params.get('estado')
+        if estado:
+            return qs.filter(estado=estado)
+        return qs
+
+    @action(detail=True, methods=['post'])
+    def resolver(self, request, pk=None):
+        """
+        Marca una solicitud como 'resuelta'.
+        """
+        solicitud = self.get_object()
+        if solicitud.estado == 'pendiente':
+            solicitud.estado = 'resuelta'
+            solicitud.resuelta_por = request.user
+            solicitud.timestamp_resolucion = timezone.now()
+            solicitud.save()
+            return Response(SolicitudCorreccionSerializer(solicitud).data)
+        
+        return Response(
+            {"error": "Esta solicitud ya estaba resuelta."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
 
 # --- VISTAS DE REPORTES (SOLO SUPERVISOR) ---
 

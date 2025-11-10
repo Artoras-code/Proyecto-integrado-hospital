@@ -10,7 +10,7 @@ import {
   CogIcon
 } from '@heroicons/react/24/outline';
 
-// Función para formatear la fecha (puedes moverla a un archivo de utils)
+// Función para formatear la fecha (sin cambios)
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleString('es-CL', {
@@ -74,7 +74,8 @@ export default function AdminDashboard() {
   }, []);
 
   if (loading) {
-    return <h1 className="text-3xl font-bold text-white">Cargando...</h1>;
+    // 1. REFACTOR: text-white -> text-primary
+    return <h1 className="text-3xl font-bold text-primary">Cargando...</h1>;
   }
 
   // Datos para las tarjetas de estadísticas
@@ -92,21 +93,26 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white">Panel del Administrador</h1>
+      {/* 2. REFACTOR: text-white -> text-primary */}
+      <h1 className="text-3xl font-bold text-primary">Panel del Administrador</h1>
 
       {/* --- 1. Tarjetas de Estadísticas --- */}
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {kpiCards.map((item) => (
-          <div key={item.name} className="overflow-hidden rounded-lg bg-gray-900 shadow">
+          // 3. REFACTOR: bg-gray-900 -> bg-surface
+          <div key={item.name} className="overflow-hidden rounded-lg bg-surface shadow">
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <item.icon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+                  {/* 4. REFACTOR: text-gray-400 -> text-secondary */}
+                  <item.icon className="h-6 w-6 text-secondary" aria-hidden="true" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="truncate text-sm font-medium text-gray-400">{item.name}</dt>
-                    <dd className="text-3xl font-semibold tracking-tight text-white">{item.value}</dd>
+                    {/* 5. REFACTOR: text-gray-400 -> text-secondary */}
+                    <dt className="truncate text-sm font-medium text-secondary">{item.name}</dt>
+                    {/* 6. REFACTOR: text-white -> text-primary */}
+                    <dd className="text-3xl font-semibold tracking-tight text-primary">{item.value}</dd>
                   </dl>
                 </div>
               </div>
@@ -121,7 +127,8 @@ export default function AdminDashboard() {
           <Link
             key={item.name}
             to={item.href}
-            className="flex flex-col items-center justify-center rounded-lg bg-gray-900 p-6 text-white shadow transition-all hover:bg-gray-800 hover:shadow-lg"
+            // 7. REFACTOR: bg-gray-900 -> bg-surface, text-white -> text-primary, hover:bg-gray-800 -> hover:bg-border
+            className="flex flex-col items-center justify-center rounded-lg bg-surface p-6 text-primary shadow transition-all hover:bg-border hover:shadow-lg"
           >
             <item.icon className="h-10 w-10 text-indigo-400" />
             <span className="mt-3 text-sm font-medium">{item.name}</span>
@@ -134,8 +141,10 @@ export default function AdminDashboard() {
         
         {/* Columna de Sesiones */}
         <div>
-          <h2 className="text-xl font-semibold text-white">Últimos Inicios de Sesión</h2>
-          <ul role="list" className="mt-4 divide-y divide-gray-700">
+          {/* 8. REFACTOR: text-white -> text-primary */}
+          <h2 className="text-xl font-semibold text-primary">Últimos Inicios de Sesión</h2>
+          {/* 9. REFACTOR: divide-gray-700 -> divide-border */}
+          <ul role="list" className="mt-4 divide-y divide-border">
             {recentSessions.map((session) => (
               <li key={session.id} className="flex gap-x-4 py-3">
                 <span className={`flex-none rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
@@ -146,10 +155,11 @@ export default function AdminDashboard() {
                   {session.accion === 'login' ? 'Login' : 'Logout'}
                 </span>
                 <div className="text-sm">
-                  <div className="font-medium text-white">{session.usuario?.username || 'N/A'}</div>
-                  <div className="text-gray-400">{session.ip_address}</div>
+                  {/* 10. REFACTOR: text-white -> text-primary, text-gray-400 -> text-secondary */}
+                  <div className="font-medium text-primary">{session.usuario?.username || 'N/A'}</div>
+                  <div className="text-secondary">{session.ip_address}</div>
                 </div>
-                <div className="ml-auto text-right text-xs text-gray-400">
+                <div className="ml-auto text-right text-xs text-secondary">
                   {formatDate(session.timestamp)}
                 </div>
               </li>
@@ -159,20 +169,20 @@ export default function AdminDashboard() {
         
         {/* Columna de Acciones */}
         <div>
-          <h2 className="text-xl font-semibold text-white">Últimas Acciones</h2>
-           <ul role="list" className="mt-4 divide-y divide-gray-700">
+          <h2 className="text-xl font-semibold text-primary">Últimas Acciones</h2>
+           <ul role="list" className="mt-4 divide-y divide-border">
             {recentActions.map((action) => (
               <li key={action.id} className="flex gap-x-4 py-3">
                 <span className="flex-none rounded-md px-2 py-1 text-xs font-medium text-yellow-200 bg-yellow-900 ring-1 ring-inset ring-yellow-700">
                   {action.accion}
                 </span>
                 <div className="text-sm">
-                  <div className="font-medium text-white">{action.usuario?.username || 'N/A'}</div>
-                  <div className="text-gray-400">
+                  <div className="font-medium text-primary">{action.usuario?.username || 'N/A'}</div>
+                  <div className="text-secondary">
                     {action.content_type_model} (ID: {action.object_id})
                   </div>
                 </div>
-                <div className="ml-auto text-right text-xs text-gray-400">
+                <div className="ml-auto text-right text-xs text-secondary">
                   {formatDate(action.timestamp)}
                 </div>
               </li>

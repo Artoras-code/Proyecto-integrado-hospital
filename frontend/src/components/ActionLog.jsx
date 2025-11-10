@@ -34,20 +34,28 @@ export default function ActionLog() {
     <div className="mt-4 flow-root">
       <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-700">
-              <thead className="bg-gray-800">
+          {/* 1. REFACTOR: ring-black ring-opacity-5 -> ring-border */}
+          <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+            {/* 2. REFACTOR: divide-gray-700 -> divide-border */}
+            <table className="min-w-full divide-y divide-border">
+              {/* 3. REFACTOR: bg-gray-800 -> bg-surface */}
+              <thead className="bg-surface">
                 <tr>
-                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white sm:pl-6">Usuario</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Acción</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Objeto Afectado</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Detalles</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Fecha y Hora</th>
+                  {/* 4. REFACTOR: text-white -> text-primary */}
+                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Usuario</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Acción</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Objeto Afectado</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Detalles</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha y Hora</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 bg-gray-900">
+              {/* 5. REFACTOR: divide-gray-800 -> divide-border, bg-gray-900 -> bg-surface */}
+              <tbody className="divide-y divide-border bg-surface">
                 {loading && (
-                  <tr><td colSpan="5" className="py-4 text-center text-gray-400">Cargando...</td></tr>
+                  <tr>
+                    {/* 6. REFACTOR: text-gray-400 -> text-secondary */}
+                    <td colSpan="5" className="py-4 text-center text-secondary">Cargando...</td>
+                  </tr>
                 )}
                 {error && (
                   <tr><td colSpan="5" className="py-4 text-center text-red-400">{error}</td></tr>
@@ -55,19 +63,20 @@ export default function ActionLog() {
                 {!loading && logs.map((log) => (
                   <tr key={log.id}>
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
-                      <div className="font-medium text-white">{log.usuario?.username || 'Sistema'}</div>
-                      <div className="text-gray-400">{log.usuario?.rol || ''}</div>
+                      {/* 7. REFACTOR: text-white -> text-primary, text-gray-400 -> text-secondary */}
+                      <div className="font-medium text-primary">{log.usuario?.username || 'Sistema'}</div>
+                      <div className="text-secondary">{log.usuario?.rol || ''}</div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${getActionColor(log.accion)}`}>
                         {log.accion}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                       <div>{log.content_type_model} (ID: {log.object_id})</div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{log.detalles || 'N/A'}</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{log.detalles || 'N/A'}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
                   </tr>

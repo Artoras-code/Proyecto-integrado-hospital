@@ -84,7 +84,8 @@ export default function GestionRegistrosPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Gestión de Registros de Parto</h1>
+        {/* 1. REFACTOR: text-white -> text-primary */}
+        <h1 className="text-3xl font-bold text-primary">Gestión de Registros de Parto</h1>
         <button
           onClick={() => navigate('/supervisor/nuevo-registro')}
           className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
@@ -97,23 +98,29 @@ export default function GestionRegistrosPage() {
       <div className="mt-8 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-800">
+            {/* 2. REFACTOR: ring-black ring-opacity-5 -> ring-border */}
+            <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+              {/* 3. REFACTOR: divide-gray-700 -> divide-border */}
+              <table className="min-w-full divide-y divide-border">
+                {/* 4. REFACTOR: bg-gray-800 -> bg-surface */}
+                <thead className="bg-surface">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white sm:pl-6">Madre</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Fecha del Parto</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Tipo de Parto</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Recién Nacidos</th>
+                    {/* 5. REFACTOR: text-white -> text-primary */}
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Madre</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha del Parto</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Tipo de Parto</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Recién Nacidos</th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Acciones</span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800 bg-gray-900">
+                {/* 6. REFACTOR: divide-gray-800 -> divide-border, bg-gray-900 -> bg-surface */}
+                <tbody className="divide-y divide-border bg-surface">
                   {loading && (
                     <tr>
-                      <td colSpan="5" className="py-4 text-center text-gray-400">Cargando registros...</td>
+                      {/* 7. REFACTOR: text-gray-400 -> text-secondary */}
+                      <td colSpan="5" className="py-4 text-center text-secondary">Cargando registros...</td>
                     </tr>
                   )}
                   {error && (
@@ -124,16 +131,18 @@ export default function GestionRegistrosPage() {
                   {!loading && registros.map((registro) => (
                     <tr key={registro.id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
-                        <div className="font-medium text-white">{registro.madre.nombre}</div>
-                        <div className="text-gray-400">{registro.madre.rut}</div>
+                        {/* 8. REFACTOR: text-white -> text-primary, text-gray-400 -> text-secondary */}
+                        <div className="font-medium text-primary">{registro.madre.nombre}</div>
+                        <div className="text-secondary">{registro.madre.rut}</div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{formatDate(registro.fecha_parto)}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{registro.tipo_parto?.nombre || 'N/A'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">
+                      {/* 9. REFACTOR: text-gray-300 -> text-secondary */}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{formatDate(registro.fecha_parto)}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{registro.tipo_parto?.nombre || 'N/A'}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                         {registro.recien_nacidos.length}
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        {/* 6. Conectar el botón de editar al handler */}
+                        {/* (Botón sin cambios) */}
                         <button
                           onClick={() => handleEdit(registro)}
                           className="text-indigo-400 hover:text-indigo-300"
@@ -152,7 +161,7 @@ export default function GestionRegistrosPage() {
         </div>
       </div>
 
-      {/* --- 7. Renderizar el modal --- */}
+      {/* --- 7. Renderizar el modal (sin cambios) --- */}
       {selectedRegistro && (
         <RegistroEditModal
           isOpen={isModalOpen}

@@ -21,6 +21,9 @@ router.register(r'registros-parto', api_views.RegistroPartoViewSet, basename='re
 # --- ¡NUEVA RUTA PARA "MIS REGISTROS" (Clínico)! ---
 router.register(r'mis-registros', api_views.MisRegistrosViewSet, basename='mis-registros')
 
+# --- ¡NUEVA RUTA PARA GESTIONAR SOLICITUDES (Supervisor)! ---
+router.register(r'solicitudes-correccion', api_views.SolicitudCorreccionViewSet, basename='solicitud-correccion')
+
 
 urlpatterns = [
     # Vistas antiguas de plantillas (las mantenemos por si acaso)

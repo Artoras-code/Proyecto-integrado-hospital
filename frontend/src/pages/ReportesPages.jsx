@@ -54,7 +54,7 @@ export default function ReportesPage() {
     }
   };
   
-  // --- 2. ¡NUEVA FUNCIÓN DE EXPORTACIÓN! ---
+  // --- 2. ¡NUEVA FUNCIÓN DE EXPORTACIÓN! --- (Sin cambios en la lógica)
   const handleExportarExcel = async () => {
     setLoadingExport(true);
     setError('');
@@ -65,14 +65,13 @@ export default function ReportesPage() {
           fecha_inicio: fechaInicio,
           fecha_fin: fechaFin,
         },
-        responseType: 'blob', // ¡Importante! Le pedimos a Axios que maneje la respuesta como un archivo binario
+        responseType: 'blob', // ¡Importante!
       });
 
-      // Crear un "enlace fantasma" para iniciar la descarga
+      // ... (Lógica de creación de enlace sin cambios) ...
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      // Extraer el nombre del archivo de los headers si es posible, si no, poner uno por defecto
       const contentDisposition = response.headers['content-disposition'];
       let fileName = `reporte_partos_${fechaInicio}_al_${fechaFin}.xlsx`;
       if (contentDisposition) {
@@ -81,12 +80,8 @@ export default function ReportesPage() {
               fileName = fileNameMatch[1];
       }
       link.setAttribute('download', fileName);
-      
-      // Simular clic
       document.body.appendChild(link);
       link.click();
-      
-      // Limpieza
       link.remove();
       window.URL.revokeObjectURL(url);
 
@@ -104,37 +99,42 @@ export default function ReportesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white">Generación de Reportes (REM BS22)</h1>
-      <p className="mt-2 text-gray-400">
+      {/* 1. REFACTOR: text-white -> text-primary */}
+      <h1 className="text-3xl font-bold text-primary">Generación de Reportes (REM BS22)</h1>
+      {/* 2. REFACTOR: text-gray-400 -> text-secondary */}
+      <p className="mt-2 text-secondary">
         Seleccione un rango de fechas para generar el consolidado o exportar la data cruda.
       </p>
 
       {/* --- Controles de Fecha --- */}
-      <div className="mt-6 flex flex-col md:flex-row gap-4 items-center rounded-lg bg-gray-900 p-4">
+      {/* 3. REFACTOR: bg-gray-900 -> bg-surface */}
+      <div className="mt-6 flex flex-col md:flex-row gap-4 items-center rounded-lg bg-surface p-4">
         {/* ... (inputs de fecha sin cambios) ... */}
         <div>
-          <label htmlFor="fecha_inicio" className="block text-sm font-medium text-gray-300">Fecha de Inicio</label>
+          {/* 4. REFACTOR: text-gray-300 -> text-secondary */}
+          <label htmlFor="fecha_inicio" className="block text-sm font-medium text-secondary">Fecha de Inicio</label>
+          {/* 5. REFACTOR: Colores del input */}
           <input
             type="date"
             id="fecha_inicio"
             value={fechaInicio}
             onChange={(e) => setFechaInicio(e.target.value)}
-            className="mt-1 block rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
         <div>
-          <label htmlFor="fecha_fin" className="block text-sm font-medium text-gray-300">Fecha de Fin</label>
+          <label htmlFor="fecha_fin" className="block text-sm font-medium text-secondary">Fecha de Fin</label>
           <input
             type="date"
             id="fecha_fin"
             value={fechaFin}
             onChange={(e) => setFechaFin(e.target.value)}
-            className="mt-1 block rounded-md border-gray-700 bg-gray-800 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
         <div className="flex-1" />
         
-        {/* Botón de Generar Reporte */}
+        {/* (Botones de acción sin cambios de color) */}
         <button
           onClick={handleGenerarReporte}
           disabled={loading || loadingExport}
@@ -143,11 +143,9 @@ export default function ReportesPage() {
           <ChartBarIcon className="h-5 w-5" />
           {loading ? 'Generando...' : 'Generar Reporte'}
         </button>
-        
-        {/* Botón de Exportar a Excel */}
         <button
           onClick={handleExportarExcel}
-          disabled={loading || loadingExport} // Deshabilitado si cualquiera de las dos acciones está en curso
+          disabled={loading || loadingExport}
           className="flex w-full md:w-auto items-center justify-center gap-x-2 rounded-md bg-green-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 disabled:opacity-50"
         >
           <DocumentArrowDownIcon className="h-5 w-5" />
@@ -160,38 +158,41 @@ export default function ReportesPage() {
         {error && <div className="rounded-md border border-red-500 bg-red-800 p-4 text-center text-red-200">{error}</div>}
         
         {reporteData && (
-          // ... (El JSX para mostrar el reporte JSON no cambia) ...
           <div className="space-y-8">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="overflow-hidden rounded-lg bg-gray-900 p-5 shadow">
-                <dt className="truncate text-sm font-medium text-gray-400">Rango de Fechas</dt>
-                <dd className="mt-1 text-xl font-semibold tracking-tight text-white">{reporteData.rango_fechas.inicio} al {reporteData.rango_fechas.fin}</dd>
+              {/* 6. REFACTOR: bg-gray-900 -> bg-surface */}
+              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
+                {/* 7. REFACTOR: text-gray-400 -> text-secondary, text-white -> text-primary */}
+                <dt className="truncate text-sm font-medium text-secondary">Rango de Fechas</dt>
+                <dd className="mt-1 text-xl font-semibold tracking-tight text-primary">{reporteData.rango_fechas.inicio} al {reporteData.rango_fechas.fin}</dd>
               </div>
-              <div className="overflow-hidden rounded-lg bg-gray-900 p-5 shadow">
-                <dt className="truncate text-sm font-medium text-gray-400">Total de Partos</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-white">{reporteData.total_partos}</dd>
+              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
+                <dt className="truncate text-sm font-medium text-secondary">Total de Partos</dt>
+                <dd className="mt-1 text-3xl font-semibold tracking-tight text-primary">{reporteData.total_partos}</dd>
               </div>
-              <div className="overflow-hidden rounded-lg bg-gray-900 p-5 shadow">
-                <dt className="truncate text-sm font-medium text-gray-400">Total de Recién Nacidos</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-white">{reporteData.total_recien_nacidos}</dd>
+              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
+                <dt className="truncate text-sm font-medium text-secondary">Total de Recién Nacidos</dt>
+                <dd className="mt-1 text-3xl font-semibold tracking-tight text-primary">{reporteData.total_recien_nacidos}</dd>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               <div>
-                <h3 className="text-xl font-semibold text-white">Sección A: Partos por Tipo</h3>
-                <div className="mt-4 overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-700">
-                    <thead className="bg-gray-800">
+                {/* 8. REFACTOR: text-white -> text-primary */}
+                <h3 className="text-xl font-semibold text-primary">Sección A: Partos por Tipo</h3>
+                {/* 9. REFACTOR: Tabla (igual que en pasos anteriores) */}
+                <div className="mt-4 overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface">
                       <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white sm:pl-6">Tipo de Parto</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Total</th>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Tipo de Parto</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800 bg-gray-900">
+                    <tbody className="divide-y divide-border bg-surface">
                       {reporteData.seccion_A_partos_por_tipo.map((item) => (
                         <tr key={item.tipo_parto__nombre}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white sm:pl-6">{item.tipo_parto__nombre || 'No especificado'}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{item.total}</td>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{item.tipo_parto__nombre || 'No especificado'}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{item.total}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -199,20 +200,20 @@ export default function ReportesPage() {
                 </div>
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-white">Sección D.1: Peso de Recién Nacidos</h3>
-                <div className="mt-4 overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-700">
-                    <thead className="bg-gray-800">
+                <h3 className="text-xl font-semibold text-primary">Sección D.1: Peso de Recién Nacidos</h3>
+                <div className="mt-4 overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface">
                       <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white sm:pl-6">Rango de Peso</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Total</th>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Rango de Peso</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800 bg-gray-900">
+                    <tbody className="divide-y divide-border bg-surface">
                       {Object.entries(reporteData.seccion_D1_pesos_recien_nacidos).map(([key, value]) => (
                         <tr key={key}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white sm:pl-6">{pesosRNCategorias[key] || key}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{value}</td>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{pesosRNCategorias[key] || key}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{value}</td>
                         </tr>
                       ))}
                     </tbody>

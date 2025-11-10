@@ -13,16 +13,24 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-10 bg-gray-100">
-      <div className="p-8 bg-white rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold text-gray-800">¡Bienvenido al Dashboard!</h1>
-        <p className="mt-2 text-gray-600">Usuario: <strong>{user?.username}</strong></p>
-        <p className="text-gray-600">Rol: <strong>{user?.rol}</strong></p>
-        <p className="text-gray-600">RUT: <strong>{user?.rut}</strong></p>
+    // 1. REFACTOR: bg-gray-100 -> bg-background
+    <div className="flex flex-col items-center justify-center min-h-screen p-10 bg-background">
+      
+      {/* 2. REFACTOR: bg-white -> bg-surface */}
+      <div className="p-8 bg-surface rounded-lg shadow-md">
+        
+        {/* 3. REFACTOR: text-gray-800 -> text-primary */}
+        <h1 className="text-3xl font-bold text-primary">¡Bienvenido al Dashboard!</h1>
+        
+        {/* 4. REFACTOR: text-gray-600 -> text-secondary */}
+        <p className="mt-2 text-secondary">Usuario: <strong>{user?.username}</strong></p>
+        <p className="text-secondary">Rol: <strong>{user?.rol}</strong></p>
+        <p className="text-secondary">RUT: <strong>{user?.rut}</strong></p>
         
         <button 
           onClick={handleLogout}
-          className="w-full px-4 py-2 mt-6 font-bold text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          // 5. REFACTOR: ring-offset-2 -> ring-offset-background
+          className="w-full px-4 py-2 mt-6 font-bold text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-background focus:ring-red-500"
         >
           Cerrar Sesión
         </button>
