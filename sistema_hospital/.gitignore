@@ -23,3 +23,6 @@ node_modules/
 
 # Archivos de entorno
 .env
+
+# Migraciones de base de datos
+migrations/

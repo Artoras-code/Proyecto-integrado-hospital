@@ -12,6 +12,8 @@ from django.http import HttpResponse
 from rest_framework.decorators import action
 from django.utils import timezone
 from auditoria.serializers import SimpleUserSerializer
+from auditoria.mixins import AuditoriaMixin
+
 
 
 # --- 1. Importar TODOS los permisos ---
@@ -56,7 +58,7 @@ class ComplicacionPartoViewSet(viewsets.ModelViewSet):
     
 # --- VISTAS DE REGISTRO CLÍNICO ---
 
-class MadreViewSet(viewsets.ModelViewSet):
+class MadreViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar Madres (Pacientes).
     Supervisor: CRUD
@@ -67,7 +69,7 @@ class MadreViewSet(viewsets.ModelViewSet):
     # --- 6. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
-class RecienNacidoViewSet(viewsets.ModelViewSet):
+class RecienNacidoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar Recién Nacidos.
     Supervisor: CRUD
@@ -78,7 +80,7 @@ class RecienNacidoViewSet(viewsets.ModelViewSet):
     # --- 7. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
-class RegistroPartoViewSet(viewsets.ModelViewSet):
+class RegistroPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     API endpoint para gestionar TODOS los eventos de Parto.
     SOLO SUPERVISOR.
@@ -92,7 +94,7 @@ class RegistroPartoViewSet(viewsets.ModelViewSet):
         return RegistroPartoWriteSerializer
 
 # --- VISTA "MIS REGISTROS" (SOLO CLÍNICO) ---
-class MisRegistrosViewSet(viewsets.ModelViewSet):
+class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
     """
     API endpoint para que el personal clínico (Doctor/Enfermero) vea y cree
     ÚNICAMENTE sus propios registros de parto.
@@ -144,6 +146,13 @@ class MisRegistrosViewSet(viewsets.ModelViewSet):
         )
         serializer = SolicitudCorreccionSerializer(solicitud)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def perform_create(self, serializer):
+        """Asigna automáticamente el usuario actual como 'registrado_por'."""
+        # Guardamos la instancia
+        instance = serializer.save(registrado_por=self.request.user)
+        # Llamamos manualmente a la auditoría
+        self.registrar_accion(instance, 'creacion', "Creó un registro desde 'Mis Registros'")
 
 
 # --- ¡NUEVO VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR! ---
