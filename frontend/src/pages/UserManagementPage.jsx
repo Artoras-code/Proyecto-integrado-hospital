@@ -88,7 +88,8 @@ export default function UserManagementPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
+        {/* 1. REFACTOR: text-white -> text-primary */}
+        <h1 className="text-3xl font-bold text-primary">Gestión de Usuarios</h1>
         <button
           onClick={() => handleOpenModal(null)} // null = Crear
           className="flex items-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
@@ -102,24 +103,30 @@ export default function UserManagementPage() {
       <div className="mt-8 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-800">
+            {/* 2. REFACTOR: ring-black ring-opacity-5 -> ring-border */}
+            <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+              {/* 3. REFACTOR: divide-gray-700 -> divide-border */}
+              <table className="min-w-full divide-y divide-border">
+                {/* 4. REFACTOR: bg-gray-800 -> bg-surface */}
+                <thead className="bg-surface">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white sm:pl-6">Usuario</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Nombre</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Rol</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">RUT</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-white">Estado</th>
+                    {/* 5. REFACTOR: text-white -> text-primary */}
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Usuario</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Nombre</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Rol</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">RUT</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Estado</th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Acciones</span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800 bg-gray-900">
+                {/* 6. REFACTOR: divide-gray-800 -> divide-border, bg-gray-900 -> bg-surface */}
+                <tbody className="divide-y divide-border bg-surface">
                   {loading && (
                     <tr>
-                      <td colSpan="6" className="py-4 text-center text-gray-400">Cargando usuarios...</td>
+                      {/* 7. REFACTOR: text-gray-400 -> text-secondary */}
+                      <td colSpan="6" className="py-4 text-center text-secondary">Cargando usuarios...</td>
                     </tr>
                   )}
                   {error && (
@@ -129,11 +136,13 @@ export default function UserManagementPage() {
                   )}
                   {!loading && users.map((user) => (
                     <tr key={user.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-white sm:pl-6">{user.username}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{user.first_name} {user.last_name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{user.rol}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">{user.rut || 'N/A'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-300">
+                      {/* 8. REFACTOR: text-white -> text-primary */}
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{user.username}</td>
+                      {/* 9. REFACTOR: text-gray-300 -> text-secondary */}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.first_name} {user.last_name}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.rol}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.rut || 'N/A'}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                         {user.is_active ? (
                           <span className="inline-flex items-center rounded-md bg-green-900 px-2 py-1 text-xs font-medium text-green-200">Activo</span>
                         ) : (

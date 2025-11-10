@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import ParameterManager from '../components/ParameterManager'; // <-- 1. Importar
+import ParameterManager from '../components/ParameterManager'; // <-- Importar
 
 // Función para clases de Tailwind
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-// 2. Definir las pestañas
+// Definir las pestañas
 const tabs = [
   { name: 'Tipos de Parto', key: 'parto', apiUrl: '/dashboard/api/parametros/tipos-parto/' },
   { name: 'Tipos de Analgesia', key: 'analgesia', apiUrl: '/dashboard/api/parametros/tipos-analgesia/' },
@@ -20,18 +20,21 @@ export default function ParametersPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white">Parámetros del Sistema</h1>
-      <p className="mt-2 text-sm text-gray-400">
+      {/* 1. REFACTOR: text-white -> text-primary */}
+      <h1 className="text-3xl font-bold text-primary">Parámetros del Sistema</h1>
+      {/* 2. REFACTOR: text-gray-400 -> text-secondary */}
+      <p className="mt-2 text-sm text-secondary">
         Administra las opciones de las listas desplegables que se usan en los formularios.
       </p>
 
       {/* 3. Pestañas (Tabs) */}
       <div className="mt-6">
         <div className="sm:hidden">
+          {/* 4. REFACTOR: Select (border-gray-700 -> border-border, bg-gray-900 -> bg-surface, text-white -> text-primary) */}
           <select
             id="tabs"
             name="tabs"
-            className="block w-full rounded-md border-gray-700 bg-gray-900 text-white focus:border-indigo-500 focus:ring-indigo-500"
+            className="block w-full rounded-md border-border bg-surface text-primary focus:border-indigo-500 focus:ring-indigo-500"
             onChange={(e) => setActiveTab(e.target.value)}
             value={activeTab}
           >
@@ -48,8 +51,9 @@ export default function ParametersPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={classNames(
                   tab.key === activeTab
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                    ? 'bg-gray-800 text-white' // (Acento se mantiene)
+                    // 5. REFACTOR: text-gray-400 -> text-secondary, hover:text-white -> hover:text-primary, hover:bg-gray-800 -> hover:bg-border
+                    : 'text-secondary hover:text-primary hover:bg-border',
                   'rounded-md px-3 py-2 text-sm font-medium'
                 )}
               >
@@ -60,7 +64,7 @@ export default function ParametersPage() {
         </div>
       </div>
 
-      {/* 4. Contenido de la Pestaña */}
+      {/* 4. Contenido de la Pestaña (El componente hijo se actualiza en el sig. paso) */}
       <div className="mt-8">
         {currentTab && (
           <ParameterManager 
