@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import LoginForm from '../components/LoginForm';
 import Verify2FAForm from '../components/Verify2FAForm';
-import Setup2FAFlow from '../components/Setup2FAFlow'; // <-- 1. Importar el nuevo componente
+import Setup2FAFlow from '../components/Setup2FAFlow'; // <-- Importar el componente
 
 export default function LoginPage() {
   const [step, setStep] = useState('credentials'); // 'credentials', 'token', o 'setup'
@@ -36,14 +36,13 @@ export default function LoginPage() {
     }
   };
 
-  // 2. Crear una función para guardar los tokens y navegar
-  // (La usaremos tanto para el login normal como para el setup)
+  // Función para guardar los tokens y navegar
   const loginAndNavigate = (data) => {
     const { access, refresh, user } = data;
     localStorage.setItem('accessToken', access);
     localStorage.setItem('refreshToken', refresh);
     localStorage.setItem('user', JSON.stringify(user));
-    navigate('/dashboard');
+    navigate('/'); // <-- Redirige a la raíz (el DashboardRedirector se encargará)
   };
 
   // handleVerifySubmit (Login normal)
@@ -55,7 +54,7 @@ export default function LoginPage() {
         username: username,
         otp_token: tokenData.otp_token,
       });
-      // 3. Usar la nueva función
+      // Usar la nueva función
       loginAndNavigate(response.data); 
     } catch (err) {
       setError(err.response?.data?.error || 'Error de conexión.');
@@ -89,7 +88,7 @@ export default function LoginPage() {
         );
       case 'setup':
         return (
-          // 4. Renderizar el nuevo componente de flujo
+          // Renderizar el nuevo componente de flujo
           <Setup2FAFlow
             username={username}
             onSetupComplete={loginAndNavigate} // Le pasamos la función de login
@@ -102,8 +101,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Sección Izquierda - Formulario */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-gray-900 text-white">
+      {/* * 1. REFACTORIZAR COLORES
+        * 'bg-gray-900' -> 'bg-background'
+        * 'text-white' -> 'text-primary'
+        */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-background text-primary">
         <div className="w-full max-w-md space-y-8">
           
           <div className="flex items-center justify-center mb-10">
@@ -112,10 +114,12 @@ export default function LoginPage() {
 
           {step === 'credentials' && (
             <>
-              <h2 className="text-3xl font-extrabold text-white">
+              {/* 2. REFACTORIZAR: 'text-white' -> 'text-primary' */}
+              <h2 className="text-3xl font-extrabold text-primary">
                 Iniciar Sesión
               </h2>
-              <p className="mt-2 text-sm text-gray-400">
+              {/* 3. REFACTORIZAR: 'text-gray-400' -> 'text-secondary' */}
+              <p className="mt-2 text-sm text-secondary">
                 Departamento de Obstetricia
               </p>
             </>
@@ -126,7 +130,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Sección Derecha - Imagen de Fondo */}
+      {/* Sección Derecha - Imagen de Fondo (Sin cambios) */}
       <div 
         className="hidden lg:block w-1/2 bg-cover bg-center"
         style={{ backgroundImage: "url('/imag_hospital.jpeg')" }}

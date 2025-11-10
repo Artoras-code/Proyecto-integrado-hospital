@@ -18,34 +18,38 @@ function LoginForm({ onSubmit, isLoading, error }) {
       )}
       
       <div>
+        {/* 1. REFACTOR: text-gray-300 -> text-secondary */}
         <label 
           htmlFor="username" 
-          className="block text-sm font-medium text-gray-300" // Texto más claro
+          className="block text-sm font-medium text-secondary"
         >
           Usuario
         </label>
+        {/* 2. REFACTOR: Colores del input */}
         <input
           id="username"
           type="text"
           required
-          className="w-full px-3 py-2 mt-1 border border-gray-700 bg-gray-800 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" // Estilos oscuros
+          className="w-full px-3 py-2 mt-1 border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={isLoading}
         />
       </div>
       <div>
+        {/* 3. REFACTOR: text-gray-300 -> text-secondary */}
         <label 
           htmlFor="password" 
-          className="block text-sm font-medium text-gray-300" // Texto más claro
+          className="block text-sm font-medium text-secondary"
         >
           Contraseña
         </label>
+        {/* 4. REFACTOR: Colores del input */}
         <input
           id="password"
           type="password"
           required
-          className="w-full px-3 py-2 mt-1 border border-gray-700 bg-gray-800 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" // Estilos oscuros
+          className="w-full px-3 py-2 mt-1 border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
@@ -54,7 +58,8 @@ function LoginForm({ onSubmit, isLoading, error }) {
       <div>
         <button 
           type="submit" 
-          className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-900 disabled:opacity-50" // Botón de color
+          // 5. REFACTOR: ring-offset-gray-900 -> ring-offset-background
+          className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-background disabled:opacity-50"
           disabled={isLoading}
         >
           {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}

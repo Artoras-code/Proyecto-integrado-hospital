@@ -10,7 +10,7 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
   const [parto, setParto] = useState({});
   const [rn, setRn] = useState({}); // Asumimos 1 RN por ahora
 
-  // --- 1. Llenar el formulario cuando se abre el modal ---
+  // --- 1. Llenar el formulario cuando se abre el modal --- (Sin cambios)
   useEffect(() => {
     if (registroToEdit) {
       // Seteamos los datos de la madre
@@ -39,7 +39,7 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
     }
   }, [registroToEdit]); // Se re-ejecuta si el registro a editar cambia
 
-  // --- 2. Manejadores de cambios (igual que en el formulario de creación) ---
+  // --- 2. Manejadores de cambios (sin cambios) ---
   
   const handleMadreChange = (e) => {
     const { name, value } = e.target;
@@ -62,7 +62,7 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
     setRn(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  // --- 3. Lógica de Envío (usando PUT/PATCH en lugar de POST) ---
+  // --- 3. Lógica de Envío (sin cambios) ---
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,27 +101,29 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
     }
   };
 
-  // --- Estilos de Clases Comunes ---
-  const labelClass = "block text-sm font-medium text-gray-300";
-  const inputClass = "mt-1 block w-full rounded-md border-gray-700 bg-gray-900 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
-  const checkboxClass = "h-4 w-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500";
+  // --- 4. REFACTOR: Estilos de Clases Comunes ---
+  const labelClass = "block text-sm font-medium text-secondary";
+  const inputClass = "mt-1 block w-full rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
+  const checkboxClass = "h-4 w-4 rounded border-border bg-background text-indigo-600 focus:ring-indigo-500";
 
   if (!isOpen) return null;
 
   return (
     // Fondo oscuro semi-transparente
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      {/* Contenedor del Modal */}
-      <div className="w-full max-w-4xl rounded-lg bg-gray-800 shadow-2xl max-h-[90vh] overflow-y-auto">
+      
+      {/* 5. REFACTOR: Contenedor del Modal (bg-gray-800 -> bg-surface) */}
+      <div className="w-full max-w-4xl rounded-lg bg-surface shadow-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
           
-          <h1 className="text-2xl font-bold text-white">
+          {/* 6. REFACTOR: Título (text-white -> text-primary) */}
+          <h1 className="text-2xl font-bold text-primary">
             Editar Registro de Parto (ID: {registroToEdit.id})
           </h1>
 
-          {/* --- SECCIÓN 1: DATOS DE LA MADRE --- */}
-          <div className="bg-gray-900 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-white mb-4">1. Datos de la Madre</h2>
+          {/* 7. REFACTOR: Secciones (bg-gray-900 -> bg-background) */}
+          <div className="bg-background p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-primary mb-4">1. Datos de la Madre</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="rut_edit" className={labelClass}>RUT</label>
@@ -147,8 +149,8 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
           </div>
 
           {/* --- SECCIÓN 2: DATOS DEL PARTO --- */}
-          <div className="bg-gray-900 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-white mb-4">2. Datos del Parto</h2>
+          <div className="bg-background p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-primary mb-4">2. Datos del Parto</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label htmlFor="fecha_parto_edit" className={labelClass}>Fecha y Hora del Parto</label>
@@ -196,8 +198,8 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
           </div>
           
           {/* --- SECCIÓN 3: DATOS DEL RECIÉN NACIDO --- */}
-          <div className="bg-gray-900 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-white mb-4">3. Datos del Recién Nacido (RN 1)</h2>
+          <div className="bg-background p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-primary mb-4">3. Datos del Recién Nacido (RN 1)</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div>
                 <label htmlFor="sexo_edit" className={labelClass}>Sexo</label>
@@ -236,14 +238,15 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
             </div>
           </div>
 
-          {/* --- BOTONES DE ACCIÓN --- */}
-          <div className="sticky bottom-0 bg-gray-800 p-4 -m-6 mt-8 flex justify-end items-center gap-4">
+          {/* 8. REFACTOR: Barra de botones (bg-gray-800 -> bg-surface) */}
+          <div className="sticky bottom-0 bg-surface p-4 -m-6 mt-8 flex justify-end items-center gap-4">
             {error && <div className="text-red-400 text-sm">{error}</div>}
             
+            {/* 9. REFACTOR: Botón Cancelar */}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium text-secondary hover:bg-border"
               disabled={loading}
             >
               Cancelar

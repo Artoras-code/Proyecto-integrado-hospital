@@ -24,6 +24,10 @@ import ClinicoLayout from './components/ClinicoLayout';
 import MisRegistrosPage from './pages/MisRegistrosPage';
 import RegistroFormPage from './pages/RegistroFormPage'; // ¡Reutilizamos este formulario!
 
+// --- ¡NUEVA IMPORTACIÓN! ---
+// Importamos la página que crearemos en el siguiente paso
+import NotificacionesPage from './pages/NotificacionesPage';
+
 /**
  * Componente (ACTUALIZADO) para redirigir al usuario a su dashboard
  * correcto después de iniciar sesión.
@@ -89,6 +93,10 @@ function App() {
           <Route path="registros" element={<GestionRegistrosPage />} />
           <Route path="nuevo-registro" element={<RegistroFormPage />} /> {/* Reutiliza el formulario */}
           <Route path="reportes" element={<ReportesPage />} />
+          
+          {/* --- ¡NUEVA RUTA AÑADIDA AQUÍ! --- */}
+          <Route path="notificaciones" element={<NotificacionesPage />} />
+
           <Route path="parameters" element={<ParametersPage />} /> {/* Movida aquí */}
         </Route>
 

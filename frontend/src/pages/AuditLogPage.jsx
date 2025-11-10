@@ -12,16 +12,17 @@ export default function AuditLogPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white">Registros de Auditoría</h1>
+      {/* 1. REFACTOR: text-white -> text-primary */}
+      <h1 className="text-3xl font-bold text-primary">Registros de Auditoría</h1>
 
       {/* Pestañas (Tabs) */}
       <div className="mt-6">
         <div className="sm:hidden">
-          {/* Select para móviles (opcional pero bueno para responsive) */}
+          {/* 2. REFACTOR: Select para móviles */}
           <select
             id="tabs"
             name="tabs"
-            className="block w-full rounded-md border-gray-700 bg-gray-900 text-white focus:border-indigo-500 focus:ring-indigo-500"
+            className="block w-full rounded-md border-border bg-surface text-primary focus:border-indigo-500 focus:ring-indigo-500"
             onChange={(e) => setActiveTab(e.target.value)}
             value={activeTab}
           >
@@ -30,14 +31,15 @@ export default function AuditLogPage() {
           </select>
         </div>
         <div className="hidden sm:block">
-          {/* Pestañas para desktop */}
+          {/* 3. REFACTOR: Pestañas para desktop */}
           <nav className="flex space-x-4" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('sesiones')}
               className={classNames(
                 activeTab === 'sesiones'
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                  ? 'bg-gray-800 text-white' // (Acento se mantiene)
+                  // Refactor:
+                  : 'text-secondary hover:text-primary hover:bg-border',
                 'rounded-md px-3 py-2 text-sm font-medium'
               )}
             >
@@ -47,8 +49,9 @@ export default function AuditLogPage() {
               onClick={() => setActiveTab('acciones')}
               className={classNames(
                 activeTab === 'acciones'
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                  ? 'bg-gray-800 text-white' // (Acento se mantiene)
+                  // Refactor:
+                  : 'text-secondary hover:text-primary hover:bg-border',
                 'rounded-md px-3 py-2 text-sm font-medium'
               )}
             >
@@ -58,7 +61,7 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      {/* Contenido de la Pestaña */}
+      {/* Contenido de la Pestaña (Los componentes hijos se actualizan después) */}
       <div className="mt-4">
         {activeTab === 'sesiones' ? <SessionLog /> : <ActionLog />}
       </div>

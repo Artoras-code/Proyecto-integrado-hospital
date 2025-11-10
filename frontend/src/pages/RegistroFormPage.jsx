@@ -70,7 +70,7 @@ export default function RegistroFormPage() {
     fetchParametros();
   }, []);
 
-  // --- Manejadores de cambios (sin cambios) ---
+  // --- Manejadores de cambios (CORREGIDOS - SIN DUPLICADOS) ---
   
   const handleMadreChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +101,7 @@ export default function RegistroFormPage() {
     }
   };
 
-  // --- Lógica de Envío (ACTUALIZADA) ---
+  // --- Lógica de Envío (CORREGIDA - SIN DUPLICADOS) ---
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,20 +173,23 @@ export default function RegistroFormPage() {
     }
   };
 
-  // --- Estilos de Clases Comunes ---
-  const labelClass = "block text-sm font-medium text-gray-300";
-  const inputClass = "mt-1 block w-full rounded-md border-gray-700 bg-gray-900 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
-  const checkboxClass = "h-4 w-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500";
+  // --- 1. REFACTOR: Estilos de Clases Comunes ---
+  const labelClass = "block text-sm font-medium text-secondary";
+  const inputClass = "mt-1 block w-full rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
+  const checkboxClass = "h-4 w-4 rounded border-border bg-background text-indigo-600 focus:ring-indigo-500";
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white">Ingresar Nuevo Registro de Parto</h1>
+      {/* 2. REFACTOR: Título */}
+      <h1 className="text-3xl font-bold text-primary">Ingresar Nuevo Registro de Parto</h1>
       
       <form onSubmit={handleSubmit} className="mt-6 space-y-8">
         
         {/* --- SECCIÓN 1: DATOS DE LA MADRE --- */}
-        <div className="bg-gray-900 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-white mb-4">1. Datos de la Madre</h2>
+        {/* 3. REFACTOR: Fondo de la sección */}
+        <div className="bg-surface p-6 rounded-lg shadow">
+          {/* 4. REFACTOR: Título de sección */}
+          <h2 className="text-xl font-semibold text-primary mb-4">1. Datos de la Madre</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="rut" className={labelClass}>RUT</label>
@@ -212,8 +215,8 @@ export default function RegistroFormPage() {
         </div>
 
         {/* --- SECCIÓN 2: DATOS DEL PARTO --- */}
-        <div className="bg-gray-900 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-white mb-4">2. Datos del Parto</h2>
+        <div className="bg-surface p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold text-primary mb-4">2. Datos del Parto</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label htmlFor="fecha_parto" className={labelClass}>Fecha y Hora del Parto</label>
@@ -269,8 +272,8 @@ export default function RegistroFormPage() {
         </div>
         
         {/* --- SECCIÓN 3: DATOS DEL RECIÉN NACIDO --- */}
-        <div className="bg-gray-900 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-white mb-4">3. Datos del Recién Nacido</h2>
+        <div className="bg-surface p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold text-primary mb-4">3. Datos del Recién Nacido</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <div>
               <label htmlFor="sexo" className={labelClass}>Sexo</label>
@@ -314,10 +317,11 @@ export default function RegistroFormPage() {
           {error && <div className="text-red-400 text-sm font-medium">{error}</div>}
           {success && <div className="text-green-400 text-sm font-medium">{success}</div>}
           
+          {/* 5. REFACTOR: Botón Cancelar */}
           <button
             type="button"
             onClick={() => navigate(-1)} // <-- ¡CORREGIDO! Vuelve a la página anterior
-            className="rounded-md border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-secondary hover:bg-border"
             disabled={loading}
           >
             Cancelar

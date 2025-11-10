@@ -50,12 +50,14 @@ export default function Setup2FAFlow({ username, onSetupComplete }) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-medium text-center text-white">Configurar Autenticación (2FA)</h3>
-      <p className="text-sm text-center text-gray-400">
+      {/* 1. REFACTOR: text-white -> text-primary */}
+      <h3 className="text-lg font-medium text-center text-primary">Configurar Autenticación (2FA)</h3>
+      {/* 2. REFACTOR: text-gray-400 -> text-secondary */}
+      <p className="text-sm text-center text-secondary">
         Escanea el código QR con tu app de autenticación (ej. Google Authenticator) y luego ingresa el código de 6 dígitos.
       </p>
 
-      {/* Contenedor del QR Code */}
+      {/* Contenedor del QR Code (IMPORTANTE: Mantenemos bg-white para que el QR sea legible) */}
       <div className="flex justify-center p-4 bg-white rounded-lg">
         {isLoading && !qrCodeData && <p className="text-gray-800">Generando código QR...</p>}
         {error && !qrCodeData && <p className="text-red-600">{error}</p>}
@@ -72,12 +74,14 @@ export default function Setup2FAFlow({ username, onSetupComplete }) {
           </div>
         )}
         <div>
+          {/* 3. REFACTOR: text-gray-300 -> text-secondary */}
           <label 
             htmlFor="otp_token_setup" 
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-secondary"
           >
             Código de 6 dígitos
           </label>
+          {/* 4. REFACTOR: Colores del input */}
           <input
             id="otp_token_setup"
             type="text"
@@ -85,7 +89,7 @@ export default function Setup2FAFlow({ username, onSetupComplete }) {
             pattern="\d{6}"
             maxLength="6"
             required
-            className="w-full px-3 py-2 mt-1 text-center tracking-widest border border-gray-700 bg-gray-800 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3 py-2 mt-1 text-center tracking-widest border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             value={otpToken}
             onChange={(e) => setOtpToken(e.target.value)}
             disabled={isLoading || !qrCodeData}
@@ -94,7 +98,8 @@ export default function Setup2FAFlow({ username, onSetupComplete }) {
         <div>
           <button 
             type="submit" 
-            className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-900 disabled:opacity-50"
+            // 5. REFACTOR: ring-offset-gray-900 -> ring-offset-background
+            className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-background disabled:opacity-50"
             disabled={isLoading || !qrCodeData}
           >
             {isLoading ? 'Verificando...' : 'Verificar y Activar Cuenta'}
