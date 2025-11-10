@@ -125,3 +125,37 @@ class RecienNacido(models.Model):
     class Meta:
         verbose_name = "Recién Nacido"
         verbose_name_plural = "Recién Nacidos"
+
+
+# --- ¡NUEVO MODELO PARA NOTIFICACIONES! ---
+
+class SolicitudCorreccion(models.Model):
+    ESTADO_CHOICES = (
+        ('pendiente', 'Pendiente'),
+        ('resuelta', 'Resuelta'),
+    )
+    
+    # El registro que necesita corrección
+    registro = models.ForeignKey(RegistroParto, on_delete=models.CASCADE, related_name="solicitudes_correccion")
+    
+    # El clínico que envía la alerta
+    solicitado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="solicitudes_creadas")
+    
+    # El supervisor que la cierra (opcional)
+    resuelta_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="solicitudes_resueltas")
+    
+    mensaje = models.TextField(blank=True, null=True, verbose_name="Mensaje del solicitante")
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pendiente')
+    
+    timestamp_creacion = models.DateTimeField(auto_now_add=True)
+    timestamp_resolucion = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        # Asumimos que el usuario puede no estar (SET_NULL)
+        solicitado_por_username = self.solicitado_por.username if self.solicitado_por else 'Usuario desconocido'
+        return f"Solicitud de {solicitado_por_username} para Registro ID {self.registro.id}"
+        
+    class Meta:
+        verbose_name = "Solicitud de Corrección"
+        verbose_name_plural = "Solicitudes de Corrección"
+        ordering = ['-timestamp_creacion']

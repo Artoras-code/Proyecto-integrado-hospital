@@ -1,8 +1,11 @@
 from rest_framework import serializers
 from .models import (
     TipoParto, TipoAnalgesia, ComplicacionParto, 
-    Madre, RegistroParto, RecienNacido
+    Madre, RegistroParto, RecienNacido,
+    SolicitudCorreccion # <-- 1. IMPORTAR NUEVO MODELO
 )
+# --- 2. IMPORTAR SERIALIZER DE USUARIO ---
+from auditoria.serializers import SimpleUserSerializer
 
 # --- SERIALIZERS DE PARÁMETROS (Ya existentes) ---
 class TipoPartoSerializer(serializers.ModelSerializer):
@@ -57,3 +60,26 @@ class RegistroPartoReadSerializer(serializers.ModelSerializer):
             'madre', 'registrado_por', 'tipo_parto', 'tipo_analgesia', 
             'complicaciones', 'recien_nacidos'
         ]
+
+
+# --- 3. AÑADIR NUEVO SERIALIZER PARA SOLICITUDES ---
+
+class SolicitudCorreccionSerializer(serializers.ModelSerializer):
+    # Usamos el SimpleUserSerializer para ver los detalles del usuario
+    solicitado_por = SimpleUserSerializer(read_only=True)
+    resuelta_por = SimpleUserSerializer(read_only=True)
+    
+    # Opcional: Si quisiéramos ver el registro completo anidado
+    # registro = RegistroPartoReadSerializer(read_only=True) 
+
+    class Meta:
+        model = SolicitudCorreccion
+        fields = [
+            'id', 'registro', 'solicitado_por', 'resuelta_por', 
+            'mensaje', 'estado', 'timestamp_creacion', 'timestamp_resolucion'
+        ]
+        # Campos que el clínico NO puede escribir al crear
+        read_only_fields = (
+            'solicitado_por', 'resuelta_por', 'estado', 
+            'timestamp_creacion', 'timestamp_resolucion'
+        )
