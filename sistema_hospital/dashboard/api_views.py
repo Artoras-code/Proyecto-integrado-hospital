@@ -13,6 +13,8 @@ from rest_framework.decorators import action
 from django.utils import timezone
 from auditoria.serializers import SimpleUserSerializer
 from auditoria.mixins import AuditoriaMixin
+from auditoria.models import HistorialAccion
+from django.contrib.contenttypes.models import ContentType
 
 
 
@@ -38,19 +40,19 @@ from .serializers import (
 )
 
 # --- VISTAS DE PARÁMETROS (Supervisor=CRUD, Clínico=Lectura) ---
-class TipoPartoViewSet(viewsets.ModelViewSet):
+class TipoPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = TipoParto.objects.all().order_by('nombre')
     serializer_class = TipoPartoSerializer
     # --- 3. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrReadOnlyClinico]
 
-class TipoAnalgesiaViewSet(viewsets.ModelViewSet):
+class TipoAnalgesiaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = TipoAnalgesia.objects.all().order_by('nombre')
     serializer_class = TipoAnalgesiaSerializer
     # --- 4. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrReadOnlyClinico]
 
-class ComplicacionPartoViewSet(viewsets.ModelViewSet):
+class ComplicacionPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = ComplicacionParto.objects.all().order_by('nombre')
     serializer_class = ComplicacionPartoSerializer
     # --- 5. CAMBIADO ---
@@ -144,6 +146,14 @@ class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
             solicitado_por=request.user,
             mensaje=mensaje
         )
+
+        #registro de auditoria
+        self.registrar_accion(
+            instance=registro,
+            accion='solicitud',
+            detalles=f"Solicitó corrección: '{mensaje}'"
+        )
+
         serializer = SolicitudCorreccionSerializer(solicitud)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
@@ -156,7 +166,7 @@ class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
 
 
 # --- ¡NUEVO VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR! ---
-class SolicitudCorreccionViewSet(viewsets.ReadOnlyModelViewSet):
+class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
     """
     API endpoint para que el Supervisor vea y gestione
     las solicitudes de corrección.
@@ -187,6 +197,14 @@ class SolicitudCorreccionViewSet(viewsets.ReadOnlyModelViewSet):
             solicitud.resuelta_por = request.user
             solicitud.timestamp_resolucion = timezone.now()
             solicitud.save()
+
+            #Registro para auditoria
+            self.registrar_accion(
+                instance=solicitud.registro,
+                accion='resolucion',
+                detalles=f"Supervisor {request.user.username} marcó la solicitud como resuelta."
+            )
+
             return Response(SolicitudCorreccionSerializer(solicitud).data)
         
         return Response(
@@ -239,6 +257,21 @@ class ReporteREMView(APIView):
             "seccion_A_partos_por_tipo": list(partos_por_tipo),
             "seccion_D1_pesos_recien_nacidos": pesos_rn,
         }
+
+        # Registro para auditoria
+        try:
+            HistorialAccion.objects.create(
+                usuario=request.user,
+                accion='reporte',
+                # Como no hay un objeto "Reporte" real en la BD,
+                # usamos al propio usuario como "objeto afectado" para cumplir con el modelo.
+                content_type=ContentType.objects.get_for_model(request.user),
+                object_id=request.user.id,
+                detalles=f"Generó reporte REM consolidado para el rango: {fecha_inicio_str} a {fecha_fin_str}"
+            )
+        except Exception as e:
+            print(f"Error auditoría reporte: {e}")
+
         return Response(reporte)
 
 
