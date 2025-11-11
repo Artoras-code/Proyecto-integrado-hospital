@@ -7,6 +7,8 @@ from django_otp import devices_for_user
 
 from .models import CustomUser
 from auditoria.signals import registrar_login # signal de auditoría
+from auditoria.mixins import AuditoriaMixin
+
 
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import login
@@ -217,7 +219,7 @@ class VerifySetup2FAAPIView(APIView):
         # El token fue inválido
         return Response({"error": "Código 2FA inválido"}, status=status.HTTP_401_UNAUTHORIZED)
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AuditoriaMixin,viewsets.ModelViewSet):
     """
     API endpoint que permite a los administradores ver, crear, editar y eliminar usuarios.
     """
@@ -236,6 +238,12 @@ class UserViewSet(viewsets.ModelViewSet):
             user = self.get_object()
             # Borramos todos los dispositivos TOTP (Autenticador) de este usuario
             TOTPDevice.objects.filter(user=user).delete()
+            # Registro para la auditoria
+            self.registrar_accion(
+                instance=user, 
+                accion='modificacion', 
+                detalles=f"Administrador reseteó el 2FA para el usuario {user.username}"
+            )
             return Response(
                 {'status': 'Dispositivos 2FA eliminados. El usuario deberá reconfigurar en el próximo login.'},
                 status=status.HTTP_200_OK
