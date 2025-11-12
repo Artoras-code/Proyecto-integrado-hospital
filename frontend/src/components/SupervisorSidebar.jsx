@@ -2,134 +2,114 @@ import React from 'react';
 import {
   HomeIcon,
   DocumentDuplicateIcon,
+  DocumentPlusIcon,
   TableCellsIcon,
-  BellAlertIcon,
-  ChevronDoubleLeftIcon, 
-  ChevronDoubleRightIcon,
-  PlusIcon, 
-  XMarkIcon
+  CogIcon,
+  ArrowLeftOnRectangleIcon,
+  SunIcon, 
+  MoonIcon, 
+  BellAlertIcon // <-- 1. IMPORTAR NUEVO ÍCONO
 } from '@heroicons/react/24/outline';
-import { NavLink, useNavigate } from 'react-router-dom'; 
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext'; 
 
-export default function SupervisorSidebar({ isSidebarOpen, toggleSidebar, isMobile = false, onClose = () => {} }) {
+// 2. Definimos la navegación para el Supervisor (¡ACTUALIZADA!)
+const navigation = [
+  { name: 'Inicio (Dashboard)', href: '/supervisor/dashboard', icon: HomeIcon },
+  { name: 'Ver Todos los Registros', href: '/supervisor/registros', icon: TableCellsIcon },
+  { name: 'Ingresar Nuevo Registro', href: '/supervisor/nuevo-registro', icon: DocumentPlusIcon },
+  { name: 'Generar Reportes (REM)', href: '/supervisor/reportes', icon: DocumentDuplicateIcon },
+  // --- ¡NUEVA LÍNEA AÑADIDA AQUÍ! ---
+  { name: 'Solicitudes de Corrección', href: '/supervisor/notificaciones', icon: BellAlertIcon },
+  // ---
+  { name: 'Parámetros Clínicos', href: '/supervisor/parameters', icon: CogIcon },
+];
 
-  const navigate = useNavigate(); 
+function classNames(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
 
-  const navigation = [
-    { name: 'Inicio', href: '/supervisor/dashboard', icon: HomeIcon },
-    { name: 'Ver Registros', href: '/supervisor/registros', icon: TableCellsIcon },
-    { name: 'Generar Reportes', href: '/supervisor/reportes', icon: DocumentDuplicateIcon },
-    { name: 'Solicitudes', href: '/supervisor/notificaciones', icon: BellAlertIcon },
-  ];
+export default function SupervisorSidebar() {
+  const user = JSON.parse(localStorage.getItem('user'));
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme(); 
 
-  function classNames(...classes) {
-    return classes.filter(Boolean).join(' ');
-  }
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
-  const sidebarContent = (
-    <>
-      <div className="flex h-16 shrink-0 items-center justify-between">
-        <img 
-          src="/logo2.png" 
-          alt="Logo Hospital" 
-          className={classNames(
-            "h-23 w-20 transition-all",
-            !isSidebarOpen && !isMobile && "mx-auto" 
-          )}
-        />
-        {isMobile && (
-          <button
-            type="button"
-            className="-m-2.5 p-2.5 text-gray-400 hover:text-white"
-            onClick={onClose}
-          >
-            <span className="sr-only">Cerrar menú</span>
-            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-          </button>
-        )}
+  return (
+    // 5. Refactor: bg-gray-900 -> bg-surface
+    <div className="flex flex-col shrink-0 gap-y-5 overflow-y-auto bg-surface px-6 pb-4 min-h-screen w-72">
+      {/* 6. Refactor: text-white -> text-primary */}
+      <div className="flex h-16 shrink-0 items-center text-primary gap-x-3">
+        <HomeIcon className="h-8 w-auto text-indigo-400" />
+        <span className='text-lg font-bold'>Área Clínica</span>
       </div>
 
-      <div className={classNames(
-          "mt-4",
-          !isSidebarOpen && !isMobile && "hidden" 
-        )}>
-        <button
-          onClick={() => {
-            navigate('/supervisor/nuevo-registro');
-            if (isMobile) onClose(); 
-          }}
-          className="flex w-full items-center justify-center gap-x-2 rounded-lg bg-accent-mint px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-mint-hover"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Ingresar Nuevo Registro
-        </button>
-      </div>
-
-
-      <nav className="flex flex-1 flex-col mt-6">
+      <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           <li>
-            <ul role="list" className="-mx-2 space-y-2">
+            <ul role="list" className="-mx-2 space-y-1">
               {navigation.map((item) => (
                 <li key={item.name}>
                   <NavLink
                     to={item.href}
-                    title={!isSidebarOpen ? item.name : undefined}
-                    onClick={isMobile ? onClose : undefined} 
                     className={({ isActive }) =>
                       classNames(
                         isActive
-                          ? 'text-accent-mint bg-accent-mint/10'
-                          : 'text-gray-400 hover:text-white hover:bg-white/10',
-                        "group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold",
-                        !isSidebarOpen && !isMobile && "justify-center" 
+                          ? 'bg-gray-800 text-white' // (Acento se mantiene)
+                          // 7. Refactor: text-gray-400 -> text-secondary, hover:text-white -> hover:text-primary, hover:bg-gray-800 -> hover:bg-border
+                          : 'text-secondary hover:text-primary hover:bg-border',
+                        'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
                       )
                     }
                   >
                     <item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-                    <span className={classNames(!isSidebarOpen && !isMobile && "hidden")}>{item.name}</span>
+                    {item.name}
                   </NavLink>
                 </li>
               ))}
             </ul>
           </li>
-          
-          {!isMobile && (
-            <li className="mt-auto -mx-2">
-              <button
-                  onClick={toggleSidebar}
-                  className="group flex justify-center w-full rounded-md p-3 text-sm font-semibold leading-6 text-gray-400 hover:text-white hover:bg-white/10"
-                  title={isSidebarOpen ? "Colapsar" : "Expandir"}
-              >
-                  {isSidebarOpen ? (
-                    <ChevronDoubleLeftIcon className="h-6 w-6 shrink-0" />
-                  ) : (
-                    <ChevronDoubleRightIcon className="h-6 w-6 shrink-0" />
-                  )}
-              </button>
-            </li>
-          )}
+
+          {/* Perfil de Usuario y Logout */}
+          <li className="mt-auto">
+            {/* 8. Refactor: text-gray-400 -> text-secondary */}
+            <div className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-secondary">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 text-xs font-medium text-white">
+                {user?.username ? user.username.charAt(0).toUpperCase() : '?'}
+              </span>
+              <span className="truncate">{user?.username || 'Usuario'} (Supervisor)</span>
+            </div>
+            
+            {/* 9. AÑADIR BOTÓN DE TEMA */}
+            <button
+              onClick={toggleTheme}
+              className="group -mx-2 mt-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-secondary hover:bg-border hover:text-primary"
+            >
+              {theme === 'light' ? (
+                <MoonIcon className="h-6 w-6 shrink-0" />
+              ) : (
+                <SunIcon className="h-6 w-6 shrink-0" />
+              )}
+              {theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}
+            </button>
+
+            {/* 10. Refactor: text-gray-400 -> text-secondary, etc. */}
+            <button
+              onClick={handleLogout}
+              className="group -mx-2 mt-2 flex w-full gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-secondary hover:bg-border hover:text-primary"
+            >
+              <ArrowLeftOnRectangleIcon className="h-6 w-6 shrink-0" />
+              Cerrar Sesión
+            </button>
+          </li>
         </ul>
       </nav>
-    </>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-dark-surface p-6">
-        {sidebarContent}
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      className={classNames(
-        "hidden lg:flex flex-col gap-y-5 overflow-y-auto bg-dark-surface text-white p-6 rounded-2xl shadow-lg transition-all duration-300 sticky top-6 h-[calc(100vh-3rem)]",
-        isSidebarOpen ? "w-72" : "w-24"
-      )}
-    >
-      {sidebarContent}
     </div>
   );
 }

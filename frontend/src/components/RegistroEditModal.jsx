@@ -5,51 +5,41 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
+  // --- Estados para los datos del formulario ---
   const [madre, setMadre] = useState({});
   const [parto, setParto] = useState({});
-  const [rn, setRn] = useState({}); 
+  const [rn, setRn] = useState({}); // Asumimos 1 RN por ahora
 
-
+  // --- 1. Llenar el formulario cuando se abre el modal --- (Sin cambios)
   useEffect(() => {
     if (registroToEdit) {
+      // Seteamos los datos de la madre
       setMadre(registroToEdit.madre || {});
+
+      // Seteamos los datos del Recién Nacido (tomamos el primero)
       setRn(registroToEdit.recien_nacidos?.[0] || {});
 
-
-      const tipoPartoObj = parametros.tiposParto.find(
-        p => p.nombre === registroToEdit.tipo_parto
-      );
-      const tipoPartoId = tipoPartoObj ? tipoPartoObj.id : '';
-
-
-      const tipoAnalgesiaObj = parametros.tiposAnalgesia.find(
-        a => a.nombre === registroToEdit.tipo_analgesia
-      );
-      const tipoAnalgesiaId = tipoAnalgesiaObj ? tipoAnalgesiaObj.id : '';
-
- 
-
+      // Seteamos los datos del Parto, extrayendo los IDs de los objetos
       setParto({
         id: registroToEdit.id,
-        fecha_parto: registroToEdit.fecha_parto?.slice(0, 16),
+        fecha_parto: registroToEdit.fecha_parto?.slice(0, 16), // Formato para datetime-local
         edad_gestacional_semanas: registroToEdit.edad_gestacional_semanas || '',
         personal_atiende: registroToEdit.personal_atiende || '',
         uso_oxitocina: registroToEdit.uso_oxitocina || false,
         ligadura_tardia_cordon: registroToEdit.ligadura_tardia_cordon || false,
-        contacto_piel_a_piel: registroToEdit.contacto_piel_a_piel || false, 
+        contacto_piel_a_piel: registroToEdit.contacto_piel_a_piel || false,
         
-
-        tipo_parto: tipoPartoId,
-        tipo_analgesia: tipoAnalgesiaId,
-        
-        complicaciones_texto: registroToEdit.complicaciones_texto || '', 
+        // Mapeamos los objetos a sus IDs para los <select>
+        tipo_parto: registroToEdit.tipo_parto?.id || '',
+        tipo_analgesia: registroToEdit.tipo_analgesia?.id || '',
+        complicaciones: registroToEdit.complicaciones?.map(c => c.id) || [],
       });
-
       
       setError('');
     }
-  }, [registroToEdit, parametros]); 
+  }, [registroToEdit]); // Se re-ejecuta si el registro a editar cambia
 
+  // --- 2. Manejadores de cambios (sin cambios) ---
   
   const handleMadreChange = (e) => {
     const { name, value } = e.target;
@@ -61,35 +51,37 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
     setParto(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
   
-
+  const handleComplicacionesChange = (e) => {
+    const options = [...e.target.selectedOptions];
+    const values = options.map(option => option.value);
+    setParto(prev => ({ ...prev, complicaciones: values }));
+  };
 
   const handleRnChange = (e) => {
     const { name, value, type, checked } = e.target;
     setRn(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-
+  // --- 3. Lógica de Envío (sin cambios) ---
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-
+      // --- PASO 1: Actualizar la Madre ---
       await apiClient.put(`/dashboard/api/madres/${madre.id}/`, madre);
 
-
+      // --- PASO 2: Actualizar el Registro de Parto ---
       const partoData = {
         ...parto,
         madre: madre.id,
-        registrado_por: registroToEdit.registrado_por, 
-        tipo_parto: parto.tipo_parto || null, 
-        tipo_analgesia: parto.tipo_analgesia || null, 
+        registrado_por: registroToEdit.registrado_por, // Mantenemos el usuario original
       };
-
       await apiClient.put(`/dashboard/api/registros-parto/${parto.id}/`, partoData);
 
-
+      // --- PASO 3: Actualizar el Recién Nacido ---
       if (rn.id) {
         await apiClient.put(`/dashboard/api/recien-nacidos/${rn.id}/`, {
           ...rn,
@@ -97,9 +89,10 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
         });
       }
       
+      // --- Éxito ---
       setLoading(false);
-      onSaveSuccess(); 
-      onClose(); 
+      onSaveSuccess(); // Llama a la función del padre para refrescar y cerrar
+      onClose();
 
     } catch (err) {
       setLoading(false);
@@ -108,25 +101,28 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
     }
   };
 
-
+  // --- 4. REFACTOR: Estilos de Clases Comunes ---
   const labelClass = "block text-sm font-medium text-secondary";
-  const inputClass = "mt-1 block w-full rounded-md border-border bg-surface text-primary shadow-sm focus:border-accent-mint focus:ring-accent-mint";
-  const checkboxClass = "h-4 w-4 rounded border-border bg-surface text-accent-mint focus:ring-accent-mint";
-  const sectionClass = "bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-inner";
+  const inputClass = "mt-1 block w-full rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500";
+  const checkboxClass = "h-4 w-4 rounded border-border bg-background text-indigo-600 focus:ring-indigo-500";
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    // Fondo oscuro semi-transparente
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      
+      {/* 5. REFACTOR: Contenedor del Modal (bg-gray-800 -> bg-surface) */}
       <div className="w-full max-w-4xl rounded-lg bg-surface shadow-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
           
+          {/* 6. REFACTOR: Título (text-white -> text-primary) */}
           <h1 className="text-2xl font-bold text-primary">
             Editar Registro de Parto (ID: {registroToEdit.id})
           </h1>
 
-
-          <div className={sectionClass}>
+          {/* 7. REFACTOR: Secciones (bg-gray-900 -> bg-background) */}
+          <div className="bg-background p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-primary mb-4">1. Datos de la Madre</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -152,8 +148,8 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
             </div>
           </div>
 
-
-          <div className={sectionClass}>
+          {/* --- SECCIÓN 2: DATOS DEL PARTO --- */}
+          <div className="bg-background p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-primary mb-4">2. Datos del Parto</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -178,22 +174,12 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
                   {parametros.tiposAnalgesia.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                 </select>
               </div>
-
-
               <div className="md:col-span-2">
-                <label htmlFor="complicaciones_texto_edit" className={labelClass}>Complicaciones (descripción)</label>
-                <textarea
-                  name="complicaciones_texto"
-                  id="complicaciones_texto_edit"
-                  value={parto.complicaciones_texto || ''}
-                  onChange={handlePartoChange} 
-                  className={inputClass}
-                  rows="4"
-                  placeholder="Describa sangrados, desgarros, u otras complicaciones..."
-                ></textarea>
+                <label htmlFor="complicaciones_edit" className={labelClass}>Complicaciones (múltiple)</label>
+                <select multiple name="complicaciones" id="complicaciones_edit" value={parto.complicaciones || []} onChange={handleComplicacionesChange} className={inputClass} size="4">
+                  {parametros.complicaciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
               </div>
-
-
             </div>
             <div className="mt-6 grid grid-cols-3 gap-6">
               <div className="flex items-center gap-x-2">
@@ -211,7 +197,8 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
             </div>
           </div>
           
-          <div className={sectionClass}>
+          {/* --- SECCIÓN 3: DATOS DEL RECIÉN NACIDO --- */}
+          <div className="bg-background p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-primary mb-4">3. Datos del Recién Nacido (RN 1)</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div>
@@ -251,20 +238,22 @@ export default function RegistroEditModal({ isOpen, onClose, onSaveSuccess, regi
             </div>
           </div>
 
+          {/* 8. REFACTOR: Barra de botones (bg-gray-800 -> bg-surface) */}
           <div className="sticky bottom-0 bg-surface p-4 -m-6 mt-8 flex justify-end items-center gap-4">
-            {error && <div className="text-red-500 text-sm">{error}</div>}
+            {error && <div className="text-red-400 text-sm">{error}</div>}
             
+            {/* 9. REFACTOR: Botón Cancelar */}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium text-secondary hover:bg-border"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg border border-transparent bg-accent-mint px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-mint-hover disabled:opacity-50"
+              className="rounded-md border border-transparent bg-indigo-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
               disabled={loading}
             >
               {loading ? 'Actualizando...' : 'Actualizar Registro'}
