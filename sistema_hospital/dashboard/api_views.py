@@ -8,7 +8,8 @@ import pandas as pd
 from io import BytesIO
 from django.http import HttpResponse
 
-from rest_framework.decorators import action, api_view, permission_classes
+# --- ¡NUEVAS IMPORTACIONES! ---
+from rest_framework.decorators import action
 from django.utils import timezone
 from auditoria.serializers import SimpleUserSerializer
 from auditoria.mixins import AuditoriaMixin
@@ -16,31 +17,28 @@ from auditoria.models import HistorialAccion
 from django.contrib.contenttypes.models import ContentType
 
 
-# --- 1. ¡IMPORTACIÓN CORREGIDA! ---
-# Eliminamos 'IsSupervisorOrReadOnlyClinico'
+
+# --- 1. Importar TODOS los permisos ---
 from cuentas.permissions import (
     IsSupervisorUser, 
     IsClinicoUser, 
+    IsSupervisorOrReadOnlyClinico,
     IsSupervisorOrClinicoCreateRead
 )
-# ---
         
-# 2. Importar Modelos
+# 2. Importar TODOS los modelos y serializers (¡ACTUALIZADO!)
 from .models import (
-    TipoParto, TipoAnalgesia,
+    TipoParto, TipoAnalgesia, ComplicacionParto, 
     Madre, RegistroParto, RecienNacido,
-    SolicitudCorreccion
+    SolicitudCorreccion # <-- AÑADIDO
 )
-# 3. ¡IMPORTACIÓN CORREGIDA!
 from .serializers import (
-    # Serializers de parámetros eliminados
+    TipoPartoSerializer, TipoAnalgesiaSerializer, ComplicacionPartoSerializer,
     MadreSerializer, RecienNacidoSerializer, 
     RegistroPartoReadSerializer, RegistroPartoWriteSerializer,
-    MisRegistrosWriteSerializer,
-    SolicitudCorreccionSerializer
+    SolicitudCorreccionSerializer # <-- AÑADIDO
 )
 
-# --- ¡TODOS LOS VIEWSETS DE PARÁMETROS ELIMINADOS! ---
 # --- VISTAS DE PARÁMETROS (Supervisor=CRUD, Clínico=Lectura) ---
 class TipoPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = TipoParto.objects.all().order_by('nombre')
@@ -63,18 +61,34 @@ class ComplicacionPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 # --- VISTAS DE REGISTRO CLÍNICO ---
 
 class MadreViewSet(AuditoriaMixin, viewsets.ModelViewSet):
+    """
+    API endpoint para gestionar Madres (Pacientes).
+    Supervisor: CRUD
+    Clínico: CR (Crear y Leer)
+    """
     queryset = Madre.objects.all().order_by('nombre')
     serializer_class = MadreSerializer
+    # --- 6. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
 class RecienNacidoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
+    """
+    API endpoint para gestionar Recién Nacidos.
+    Supervisor: CRUD
+    Clínico: CR (Crear y Leer)
+    """
     queryset = RecienNacido.objects.all().order_by('-parto_asociado__fecha_parto')
     serializer_class = RecienNacidoSerializer
+    # --- 7. CAMBIADO ---
     permission_classes = [IsAuthenticated, IsSupervisorOrClinicoCreateRead]
 
 class RegistroPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
+    """
+    API endpoint para gestionar TODOS los eventos de Parto.
+    SOLO SUPERVISOR.
+    """
     queryset = RegistroParto.objects.all().order_by('-fecha_parto')
-    permission_classes = [IsAuthenticated, IsSupervisorUser] 
+    permission_classes = [IsAuthenticated, IsSupervisorUser] # <-- Solo Supervisor
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -83,36 +97,44 @@ class RegistroPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
 # --- VISTA "MIS REGISTROS" (SOLO CLÍNICO) ---
 class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
+    """
+    API endpoint para que el personal clínico (Doctor/Enfermero) vea y cree
+    ÚNICAMENTE sus propios registros de parto.
+    """
     serializer_class = RegistroPartoReadSerializer
-    permission_classes = [IsAuthenticated, IsClinicoUser]
+    permission_classes = [IsAuthenticated, IsClinicoUser] # <-- Solo Clínico
+
+    # (De PASO 1) - Restringimos los métodos.
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
+        """
+        Filtra solo los registros creados por el usuario actual.
+        """
         user = self.request.user
         return RegistroParto.objects.filter(registrado_por=user).order_by('-fecha_parto')
     
-    # --- ¡MÉTODO ACTUALIZADO! ---
     def get_serializer_class(self):
         """
-        Usa el serializer de lectura para 'list' y 'retrieve'.
-        Usa el 'MisRegistrosWriteSerializer' para 'create'.
+        Usa el serializer de escritura para crear/actualizar.
         """
         if self.action in ['list', 'retrieve']:
             return RegistroPartoReadSerializer
-        
-        # Ahora sí encontrará 'MisRegistrosWriteSerializer'
-        return MisRegistrosWriteSerializer
-    # ---
+        return RegistroPartoWriteSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(registrado_por=self.request.user)
-        self.registrar_accion(instance, 'creacion', "Creó un registro desde 'Mis Registros'")
+        """
+        Asigna automáticamente el usuario actual como 'registrado_por'.
+        """
+        serializer.save(registrado_por=self.request.user)
 
+    # --- ¡NUEVA ACCIÓN PARA SOLICITAR CORRECCIÓN! ---
     @action(detail=True, methods=['post'], permission_classes=[IsClinicoUser])
     def solicitar_correccion(self, request, pk=None):
-        registro = self.get_object() 
+        registro = self.get_object() # Obtiene el registro de 'MisRegistros'
         mensaje = request.data.get('mensaje', '')
         
+        # Evitar duplicados
         if SolicitudCorreccion.objects.filter(registro=registro, estado='pendiente').exists():
             return Response(
                 {"error": "Ya existe una solicitud pendiente para este registro."},
@@ -134,10 +156,15 @@ class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
 
         serializer = SolicitudCorreccionSerializer(solicitud)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def perform_create(self, serializer):
+        """Asigna automáticamente el usuario actual como 'registrado_por'."""
+        # Guardamos la instancia
+        instance = serializer.save(registrado_por=self.request.user)
+        # Llamamos manualmente a la auditoría
+        self.registrar_accion(instance, 'creacion', "Creó un registro desde 'Mis Registros'")
 
 
-# --- VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR ---
-class SolicitudCorreccionViewSet(viewsets.ReadOnlyModelViewSet):
 # --- ¡NUEVO VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR! ---
 class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
     """
@@ -146,9 +173,13 @@ class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
     """
     queryset = SolicitudCorreccion.objects.all().order_by('-timestamp_creacion')
     serializer_class = SolicitudCorreccionSerializer
-    permission_classes = [IsAuthenticated, IsSupervisorUser] 
+    permission_classes = [IsAuthenticated, IsSupervisorUser] # Solo Supervisor
 
     def get_queryset(self):
+        """
+        Filtra opcionalmente por estado.
+        Ej: /api/dashboard/solicitudes-correccion/?estado=pendiente
+        """
         qs = super().get_queryset()
         estado = self.request.query_params.get('estado')
         if estado:
@@ -157,6 +188,9 @@ class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def resolver(self, request, pk=None):
+        """
+        Marca una solicitud como 'resuelta'.
+        """
         solicitud = self.get_object()
         if solicitud.estado == 'pendiente':
             solicitud.estado = 'resuelta'
@@ -182,10 +216,14 @@ class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
 # --- VISTAS DE REPORTES (SOLO SUPERVISOR) ---
 
 class ReporteREMView(APIView):
+    """
+    API endpoint para generar el reporte consolidado REM BS22.
+    SOLO SUPERVISOR.
+    """
     permission_classes = [IsAuthenticated, IsSupervisorUser]
 
     def get(self, request, *args, **kwargs):
-        # ... (lógica de fechas)
+        # ... (lógica del reporte)
         fecha_inicio_str = request.query_params.get('fecha_inicio')
         fecha_fin_str = request.query_params.get('fecha_fin')
         if not fecha_inicio_str or not fecha_fin_str:
@@ -238,10 +276,14 @@ class ReporteREMView(APIView):
 
 
 class ExportRegistrosExcelView(APIView):
+    """
+    API endpoint para exportar los registros de parto (data cruda) a Excel.
+    SOLO SUPERVISOR.
+    """
     permission_classes = [IsAuthenticated, IsSupervisorUser]
 
     def get(self, request, *args, **kwargs):
-        # ... (lógica de fechas) ...
+        # ... (lógica de exportación a Excel)
         fecha_inicio_str = request.query_params.get('fecha_inicio')
         fecha_fin_str = request.query_params.get('fecha_fin')
         if not fecha_inicio_str or not fecha_fin_str:
@@ -258,15 +300,15 @@ class ExportRegistrosExcelView(APIView):
             'parto_asociado__madre', 
             'parto_asociado__tipo_parto',
             'parto_asociado__tipo_analgesia'
+        ).prefetch_related(
+            'parto_asociado__complicaciones'
         ).order_by('parto_asociado__fecha_parto')
 
         data = []
         for rn in qs:
             parto = rn.parto_asociado
             madre = parto.madre
-            
-            complicaciones_str = parto.complicaciones_texto or "Ninguna"
-            
+            complicaciones_str = ", ".join([c.nombre for c in parto.complicaciones.all()])
             data.append({
                 "RUT Madre": madre.rut,
                 "Nombre Madre": madre.nombre,
@@ -279,7 +321,7 @@ class ExportRegistrosExcelView(APIView):
                 "APGAR 5'": rn.apgar_5_min,
                 "Edad Gestacional (sem)": parto.edad_gestacional_semanas,
                 "Analgesia": parto.tipo_analgesia.nombre if parto.tipo_analgesia else 'N/A',
-                "Complicaciones": complicaciones_str,
+                "Complicaciones": complicaciones_str or "Ninguna",
                 "Personal Atiende": parto.personal_atiende,
                 "Contacto Piel a Piel": "Sí" if parto.contacto_piel_a_piel else "No",
                 "Ligadura Tardía": "Sí" if parto.ligadura_tardia_cordon else "No",
@@ -300,39 +342,3 @@ class ExportRegistrosExcelView(APIView):
         )
         response['Content-Disposition'] = f"attachment; filename=reporte_partos_{fecha_inicio_str}_al_{fecha_fin_str}.xlsx"
         return response
-
-# --- VISTA DE STATS DEL DASHBOARD DEL SUPERVISOR ---
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, IsSupervisorUser])
-def supervisor_dashboard_stats(request):
-    """
-    API endpoint para obtener las estadísticas del dashboard del Supervisor.
-    """
-    pending_corrections_count = SolicitudCorreccion.objects.filter(estado='pendiente').count()
-    
-    today = timezone.now()
-    registros_this_month = RegistroParto.objects.filter(
-        fecha_parto__year=today.year, 
-        fecha_parto__month=today.month
-    ).count()
-
-    latest_pending_corrections = SolicitudCorreccion.objects.filter(estado='pendiente') \
-                                .select_related('solicitado_por', 'registro') \
-                                .order_by('-timestamp_creacion')[:5]
-
-    formatted_corrections = [
-        {
-            'id': s.id,
-            'registro_id': s.registro.id,
-            'solicitado_por': s.solicitado_por.username if s.solicitado_por else 'N/A',
-            'mensaje': s.mensaje,
-            'timestamp': timezone.localtime(s.timestamp_creacion).strftime('%Y-%m-%d %H:%M'),
-        } for s in latest_pending_corrections
-    ]
-
-    data = {
-        'pending_corrections_count': pending_corrections_count,
-        'registros_this_month': registros_this_month,
-        'latest_pending_corrections': formatted_corrections,
-    }
-    return Response(data, status=status.HTTP_200_OK)
