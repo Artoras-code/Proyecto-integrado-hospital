@@ -34,6 +34,10 @@ class HistorialAccion(models.Model):
         ('creacion', 'Creación'),
         ('modificacion', 'Modificación'),
         ('eliminacion', 'Eliminación'),
+        #se agregan cambios para un mejor registro de las auditorias
+        ('solicitud', 'Solicitud de Corrección'),
+        ('resolucion', 'Resolución de Solicitud'),
+        ('reporte', 'Generación de Reporte'),
     )
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
