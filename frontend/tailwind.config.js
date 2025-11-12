@@ -1,53 +1,38 @@
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  // 1. Habilitamos el modo oscuro basado en 'class'
   darkMode: 'class',
-
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
+
+      fontFamily: {
+        sans: ['Satoshi', ...defaultTheme.fontFamily.sans],
+      },
+      
+
       colors: {
-        background: 'var(--color-background)', // Fondo principal
-        surface: 'var(--color-surface)',     // Fondo de "tarjetas", "sidebars"
+
+        background: 'var(--color-background)', 
+        surface: 'var(--color-surface)',     
+        primary: 'var(--color-text-primary)',     
+        secondary: 'var(--color-text-secondary)', 
+        border: 'var(--color-border)', 
         
-        primary: 'var(--color-text-primary)',     // Texto principal
-        secondary: 'var(--color-text-secondary)', // Texto secundario, gris
-        
-        border: 'var(--color-border)', // Bordes
-        
-        // Colores de acento 
-        indigo: {
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-        },
-        green: {
-          200: '#bbf7d0',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-        },
-        red: {
-          200: '#fecaca',
-          500: '#ef4444',
-          800: '#991b1b',
-          900: '#7f1d1d',
-        },
-        yellow: {
-          200: '#fef08a',
-          300: '#fde047',
-          400: '#facc15',
-          900: '#713f12',
-        },
-        blue: {
-          200: '#bfdbfe',
-          900: '#1e3a8a',
-        },
+
+        'accent-mint': '#20C997', 
+        'accent-mint-hover': '#1AAE8A', 
+        'accent-mint-light': '#99E6C9', 
+
+
+        'dark-surface': '#2D3436', 
+        'light-gray': '#DFE6E9',   
+        'dark-gray': '#636E72',    
+        'mid-gray': '#B2BEC3',     
       }
     },
   },

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { EyeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
-// Función para formatear la fecha
+// (Función formatDate sin cambios)
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleString('es-CL', {
@@ -21,7 +21,7 @@ export default function NotificacionesPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // 1. Cargar las solicitudes pendientes al iniciar
+  // (Lógica de fetchSolicitudes, handleResolver, etc. se mantiene igual)
   useEffect(() => {
     fetchSolicitudes();
   }, []);
@@ -30,7 +30,6 @@ export default function NotificacionesPage() {
     setLoading(true);
     setError('');
     try {
-      // Pedimos a la API solo las que están 'pendientes'
       const response = await apiClient.get('/dashboard/api/solicitudes-correccion/', {
         params: { estado: 'pendiente' }
       });
@@ -42,43 +41,46 @@ export default function NotificacionesPage() {
     }
   };
 
-  // 2. Acción para marcar una solicitud como 'resuelta'
   const handleResolver = async (id) => {
     if (!window.confirm("¿Está seguro que ya corrigió el registro y desea marcar esta solicitud como 'resuelta'?")) {
       return;
     }
     try {
       await apiClient.post(`/dashboard/api/solicitudes-correccion/${id}/resolver/`);
-      // Si tiene éxito, recargamos la lista para que desaparezca
       fetchSolicitudes();
     } catch (err) {
       alert("Error al marcar como resuelta.");
     }
   };
 
-  // 3. Acción para navegar a la página de gestión
   const handleIrARegistro = () => {
-    // Llevamos al supervisor a la página donde puede editar
-    // (Abrir el modal directamente requeriría un state manager más complejo)
     alert("Será redirigido a la 'Gestión de Registros' para editar la ficha.\nPor favor, anote el ID del registro que necesita corregir.");
     navigate('/supervisor/registros');
   };
 
   return (
-    <div>
-      {/* Título de la página */}
-      <h1 className="text-3xl font-bold text-primary">Solicitudes de Corrección</h1>
-      <p className="mt-2 text-secondary">
-        Lista de registros que el personal clínico ha marcado para revisión.
-      </p>
+    // 1. Contenedor principal de la tarjeta flotante
+    <div className="bg-surface rounded-lg shadow-md p-6">
 
-      {/* --- Tabla de Solicitudes --- */}
-      <div className="mt-8 flow-root">
+      {/* 2. Header de la tarjeta */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Solicitudes de Corrección</h1>
+          <p className="mt-1 text-sm text-secondary">
+            Lista de registros que el personal clínico ha marcado para revisión.
+          </p>
+        </div>
+      </div>
+
+      {/* --- 3. Tabla de Solicitudes --- */}
+      <div className="flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+            {/* 4. Nuevo contenedor de la tabla con borde */}
+            <div className="overflow-hidden rounded-lg border border-border">
               <table className="min-w-full divide-y divide-border">
-                <thead className="bg-surface">
+                {/* 5. Cabecera gris claro */}
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Solicitado por</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">ID Registro</th>
@@ -89,6 +91,7 @@ export default function NotificacionesPage() {
                     </th>
                   </tr>
                 </thead>
+                {/* 6. Cuerpo de tabla blanco (surface) */}
                 <tbody className="divide-y divide-border bg-surface">
                   {loading && (
                     <tr>
@@ -107,7 +110,8 @@ export default function NotificacionesPage() {
                         <div className="text-secondary">{solicitud.solicitado_por?.rol || ''}</div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
-                        <span className="font-mono text-indigo-400">{solicitud.registro}</span>
+                        {/* ¡CAMBIO! Usamos color menta para el ID */}
+                        <span className="font-mono text-accent-mint">{solicitud.registro}</span>
                       </td>
                       <td className="whitespace-normal px-3 py-4 text-sm text-secondary max-w-xs truncate">
                         {solicitud.mensaje}
@@ -117,7 +121,8 @@ export default function NotificacionesPage() {
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-4">
                         <button
                           onClick={handleIrARegistro}
-                          className="text-indigo-400 hover:text-indigo-300"
+                          // ¡CAMBIO! Color menta para "Ver"
+                          className="text-accent-mint hover:text-accent-mint-hover"
                           title="Ir a gestionar registros"
                         >
                           <EyeIcon className="h-5 w-5" />
@@ -125,7 +130,8 @@ export default function NotificacionesPage() {
                         </button>
                         <button
                           onClick={() => handleResolver(solicitud.id)}
-                          className="text-green-400 hover:text-green-300"
+                          // Mantenemos verde para "Resolver" (acción positiva)
+                          className="text-green-500 hover:text-green-600"
                           title="Marcar como Resuelta"
                         >
                           <CheckCircleIcon className="h-5 w-5" />

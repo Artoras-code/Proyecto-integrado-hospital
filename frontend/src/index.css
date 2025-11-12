@@ -1,33 +1,63 @@
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./assets/fonts/Satoshi-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./assets/fonts/Satoshi-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./assets/fonts/Satoshi-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./assets/fonts/Satoshi-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 
 :root {
-  --color-background: #ffffff;    /* Fondo blanco */
-  --color-surface: #f4f4f5;       /* Fondo de tarjetas (gris muy claro) */
-  --color-text-primary: #111827;  /* Texto casi negro */
-  --color-text-secondary: #6b7280;/* Texto gris */
-  --color-border: #e5e7eb;       /* Bordes */
+  --color-background: #DFE6E9;    
+  --color-surface: #FFFFFF;       
+  --color-text-primary: #2D3436;  
+  --color-text-secondary: #636E72;
+  --color-border: #DFE6E9;       
 
   color-scheme: light;
 }
 
 
 .dark {
-  --color-background: #1e1e1e;    /* Fondo Gemini */
-  --color-surface: #2d2d2d;       /* Fondo de tarjetas (gris oscuro) */
-  --color-text-primary: #e5e7eb;  /* Texto gris claro */
-  --color-text-secondary: #9ca3af;/* Texto gris */
-  --color-border: #374151;       /* Bordes */
+  --color-background: #1e1e1e;    
+  --color-surface: #2d2d2d;       
+  --color-text-primary: #e5e7eb;  
+  --color-text-secondary: #9ca3af;
+  --color-border: #374151;       
 
   color-scheme: dark;
 }
 
+
 body {
-  @apply bg-background text-primary;
+  @apply bg-background text-primary; 
   
-  /* Transición suave al cambiar de tema */
   transition-property: color, background-color;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
