@@ -39,27 +39,7 @@ from .serializers import (
     MisRegistrosWriteSerializer,
     SolicitudCorreccionSerializer
 )
-
-# --- ¡TODOS LOS VIEWSETS DE PARÁMETROS ELIMINADOS! ---
-# --- VISTAS DE PARÁMETROS (Supervisor=CRUD, Clínico=Lectura) ---
-class TipoPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
-    queryset = TipoParto.objects.all().order_by('nombre')
-    serializer_class = TipoPartoSerializer
-    # --- 3. CAMBIADO ---
-    permission_classes = [IsAuthenticated, IsSupervisorOrReadOnlyClinico]
-
-class TipoAnalgesiaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
-    queryset = TipoAnalgesia.objects.all().order_by('nombre')
-    serializer_class = TipoAnalgesiaSerializer
-    # --- 4. CAMBIADO ---
-    permission_classes = [IsAuthenticated, IsSupervisorOrReadOnlyClinico]
-
-class ComplicacionPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
-    queryset = ComplicacionParto.objects.all().order_by('nombre')
-    serializer_class = ComplicacionPartoSerializer
-    # --- 5. CAMBIADO ---
-    permission_classes = [IsAuthenticated, IsSupervisorOrReadOnlyClinico]
-    
+ 
 # --- VISTAS DE REGISTRO CLÍNICO ---
 
 class MadreViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -137,7 +117,6 @@ class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
 
 
 # --- VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR ---
-class SolicitudCorreccionViewSet(viewsets.ReadOnlyModelViewSet):
 # --- ¡NUEVO VIEWSET PARA NOTIFICACIONES DEL SUPERVISOR! ---
 class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
     """
