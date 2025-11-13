@@ -73,18 +73,35 @@ class MisRegistrosViewSet(AuditoriaMixin,viewsets.ModelViewSet):
     
     # --- ¡MÉTODO ACTUALIZADO! ---
     def get_serializer_class(self):
-        """
-        Usa el serializer de lectura para 'list' y 'retrieve'.
-        Usa el 'MisRegistrosWriteSerializer' para 'create'.
-        """
+        # --- AÑADIR ESTA LÍNEA DE DEBUG ---
+        print(f"DEBUG (MisRegistros): La acción es {self.action}")
+        
         if self.action in ['list', 'retrieve']:
+            print("DEBUG (MisRegistros): Usando RegistroPartoReadSerializer")
             return RegistroPartoReadSerializer
         
-        # Ahora sí encontrará 'MisRegistrosWriteSerializer'
+        # --- AÑADIR ESTA LÍNEA DE DEBUG ---
+        print("DEBUG (MisRegistros): Usando MisRegistrosWriteSerializer")
         return MisRegistrosWriteSerializer
     # ---
 
+    # --- AÑADIR ESTE MÉTODO 'create' PARA DEBUG ---
+    def create(self, request, *args, **kwargs):
+        print("DEBUG (MisRegistros): Datos recibidos en 'create':", request.data)
+        serializer = self.get_serializer(data=request.data)
+        
+        if not serializer.is_valid():
+            print("===============================================================")
+            print("DEBUG (MisRegistros): ¡¡¡El Serializer NO es válido!!! Errores:")
+            print(serializer.errors) # <-- ¡¡ESTO NOS DIRÁ EL ERROR EXACTO!!
+            print("===============================================================")
+        
+        return super().create(request, *args, **kwargs)
+    # ---
+
     def perform_create(self, serializer):
+        # --- AÑADIR ESTA LÍNEA DE DEBUG ---
+        print("DEBUG (MisRegistros): El serializer es válido, ejecutando perform_create.")
         instance = serializer.save(registrado_por=self.request.user)
         self.registrar_accion(instance, 'creacion', "Creó un registro desde 'Mis Registros'")
 
