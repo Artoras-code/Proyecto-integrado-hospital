@@ -23,6 +23,6 @@ class IsSupervisorOrClinicoCreateRead(BasePermission):
         
 
         if request.user.rol == CustomUser.DOCTOR or request.user.rol == CustomUser.ENFERMERO:
-            return request.method in (SAFE_METHODS + ('POST',))
+            return request.method in (SAFE_METHODS + ('POST', 'DELETE'))
     
         return False
