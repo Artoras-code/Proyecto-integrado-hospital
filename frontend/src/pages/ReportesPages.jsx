@@ -1,38 +1,26 @@
 import React, { useState } from 'react';
 import apiClient from '../services/apiClient';
-import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, DocumentArrowDownIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
-// (Funciones de fecha y mapeo de categorías... sin cambios)
 const getToday = () => new Date().toISOString().split('T')[0];
 const getFirstDayOfMonth = () => {
   const today = new Date();
   return new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
 };
-const pesosRNCategorias = {
-  menos_500g: "Menos de 500g",
-  de_500_a_999g: "500g - 999g",
-  de_1000_a_1499g: "1000g - 1499g",
-  de_1500_a_1999g: "1500g - 1999g",
-  de_2000_a_2499g: "2000g - 2499g",
-  de_2500_a_2999g: "2500g - 2999g",
-  de_3000_a_3999g: "3000g - 3999g",
-  mas_4000g: "4000g o más",
-};
 
 export default function ReportesPage() {
   const [fechaInicio, setFechaInicio] = useState(getFirstDayOfMonth());
   const [fechaFin, setFechaFin] = useState(getToday());
-  const [reporteData, setReporteData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingExport, setLoadingExport] = useState(false); // Estado de carga para el Excel
+  const [loadingExport, setLoadingExport] = useState(false);
   const [error, setError] = useState('');
 
-  // 1. Función para llamar a la API de reportes (sin cambios)
   const handleGenerarReporte = async () => {
     setLoading(true);
     setError('');
-    setReporteData(null);
-
+    setData(null); // Limpiar datos anteriores
+    
     if (!fechaInicio || !fechaFin) {
       setError('Por favor, seleccione una fecha de inicio y fin.');
       setLoading(false);
@@ -41,189 +29,240 @@ export default function ReportesPage() {
 
     try {
       const response = await apiClient.get('/dashboard/api/reportes/rem/', {
-        params: {
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
-        }
+        params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin }
       });
-      setReporteData(response.data);
+      setData(response.data);
     } catch (err) {
       setError('Error al generar el reporte: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }
   };
-  
-  // --- 2. ¡NUEVA FUNCIÓN DE EXPORTACIÓN! --- (Sin cambios en la lógica)
+
   const handleExportarExcel = async () => {
     setLoadingExport(true);
-    setError('');
-
     try {
       const response = await apiClient.get('/dashboard/api/export/excel/', {
-        params: {
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
-        },
-        responseType: 'blob', // ¡Importante!
+        params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin },
+        responseType: 'blob',
       });
-
-      // ... (Lógica de creación de enlace sin cambios) ...
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = `reporte_partos_${fechaInicio}_al_${fechaFin}.xlsx`;
-      if (contentDisposition) {
-          const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
-          if (fileNameMatch.length === 2)
-              fileName = fileNameMatch[1];
-      }
-      link.setAttribute('download', fileName);
+      link.setAttribute('download', `registros_partos_${fechaInicio}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
-
     } catch (err) {
-      if (err.response?.status === 404) {
-        setError('No se encontraron datos para exportar en ese rango de fechas.');
-      } else {
-        setError('Error al exportar el archivo.');
-      }
-      console.error(err);
+      setError('Error al exportar Excel.');
     } finally {
       setLoadingExport(false);
     }
   };
 
-  return (
-    <div>
-      {/* 1. REFACTOR: text-white -> text-primary */}
-      <h1 className="text-3xl font-bold text-primary">Generación de Reportes (REM BS22)</h1>
-      {/* 2. REFACTOR: text-gray-400 -> text-secondary */}
-      <p className="mt-2 text-secondary">
-        Seleccione un rango de fechas para generar el consolidado o exportar la data cruda.
-      </p>
+  const handleExportarREMPDF = async () => {
+    setLoadingExport(true);
+    try {
+      const response = await apiClient.get('/dashboard/api/reportes/rem/pdf/', {
+        params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `REM_A24_${fechaInicio}_al_${fechaFin}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError('Error al exportar PDF.');
+    } finally {
+      setLoadingExport(false);
+    }
+  };
 
-      {/* --- Controles de Fecha --- */}
-      {/* 3. REFACTOR: bg-gray-900 -> bg-surface */}
-      <div className="mt-6 flex flex-col md:flex-row gap-4 items-center rounded-lg bg-surface p-4">
-        {/* ... (inputs de fecha sin cambios) ... */}
-        <div>
-          {/* 4. REFACTOR: text-gray-300 -> text-secondary */}
-          <label htmlFor="fecha_inicio" className="block text-sm font-medium text-secondary">Fecha de Inicio</label>
-          {/* 5. REFACTOR: Colores del input */}
-          <input
-            type="date"
-            id="fecha_inicio"
-            value={fechaInicio}
-            onChange={(e) => setFechaInicio(e.target.value)}
-            className="mt-1 block rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          />
+  // Componentes auxiliares para celdas de tabla
+  const Th = ({ children, align = "left", className = "" }) => (
+    <th className={`px-4 py-3 bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-${align} ${className}`}>
+      {children}
+    </th>
+  );
+  
+  const Td = ({ children, align = "left", className = "" }) => (
+    <td className={`px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-t border-gray-200 dark:border-gray-700 text-${align} ${className}`}>
+      {children}
+    </td>
+  );
+
+  return (
+    <div className="w-full max-w-[1920px] mx-auto px-4 py-8">
+      <h1 className="text-4xl lg:text-5xl font-extrabold text-accent-mint uppercase leading-tight tracking-tighter mb-6">
+        Reporte REM A.24
+      </h1>
+
+      {/* --- FILTROS Y BOTONES --- */}
+      <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border mb-8">
+        <h2 className="text-xl font-semibold text-primary mb-4">Seleccionar Rango de Fechas</h2>
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Fecha Inicio</label>
+            <input 
+              type="date" 
+              value={fechaInicio} 
+              onChange={e => setFechaInicio(e.target.value)} 
+              className="block w-full rounded-md border-border bg-background text-primary p-2 focus:ring-accent-mint focus:border-accent-mint" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Fecha Fin</label>
+            <input 
+              type="date" 
+              value={fechaFin} 
+              onChange={e => setFechaFin(e.target.value)} 
+              className="block w-full rounded-md border-border bg-background text-primary p-2 focus:ring-accent-mint focus:border-accent-mint" 
+            />
+          </div>
+          
+          <div className="flex-1"></div>
+
+          <div className="flex gap-3">
+            <button 
+                onClick={handleExportarExcel} disabled={loading || loadingExport}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
+            >
+                <DocumentArrowDownIcon className="h-5 w-5" /> Excel
+            </button>
+            <button 
+                onClick={handleExportarREMPDF} disabled={loading || loadingExport}
+                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
+            >
+                <DocumentTextIcon className="h-5 w-5" /> PDF REM
+            </button>
+            <button 
+                onClick={handleGenerarReporte} disabled={loading || loadingExport}
+                className="flex items-center gap-2 bg-accent-mint text-white px-6 py-2 rounded-lg font-semibold hover:bg-accent-mint-hover disabled:opacity-50"
+            >
+                <ChartBarIcon className="h-5 w-5" /> {loading ? 'Generando...' : 'Ver Reporte'}
+            </button>
+          </div>
         </div>
-        <div>
-          <label htmlFor="fecha_fin" className="block text-sm font-medium text-secondary">Fecha de Fin</label>
-          <input
-            type="date"
-            id="fecha_fin"
-            value={fechaFin}
-            onChange={(e) => setFechaFin(e.target.value)}
-            className="mt-1 block rounded-md border-border bg-background text-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          />
-        </div>
-        <div className="flex-1" />
-        
-        {/* (Botones de acción sin cambios de color) */}
-        <button
-          onClick={handleGenerarReporte}
-          disabled={loading || loadingExport}
-          className="flex w-full md:w-auto items-center justify-center gap-x-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-        >
-          <ChartBarIcon className="h-5 w-5" />
-          {loading ? 'Generando...' : 'Generar Reporte'}
-        </button>
-        <button
-          onClick={handleExportarExcel}
-          disabled={loading || loadingExport}
-          className="flex w-full md:w-auto items-center justify-center gap-x-2 rounded-md bg-green-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 disabled:opacity-50"
-        >
-          <DocumentArrowDownIcon className="h-5 w-5" />
-          {loadingExport ? 'Exportando...' : 'Exportar a Excel'}
-        </button>
+        {error && <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg border border-red-200">{error}</div>}
       </div>
 
-      {/* --- Contenedor de Resultados --- */}
-      <div className="mt-8">
-        {error && <div className="rounded-md border border-red-500 bg-red-800 p-4 text-center text-red-200">{error}</div>}
-        
-        {reporteData && (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {/* 6. REFACTOR: bg-gray-900 -> bg-surface */}
-              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
-                {/* 7. REFACTOR: text-gray-400 -> text-secondary, text-white -> text-primary */}
-                <dt className="truncate text-sm font-medium text-secondary">Rango de Fechas</dt>
-                <dd className="mt-1 text-xl font-semibold tracking-tight text-primary">{reporteData.rango_fechas.inicio} al {reporteData.rango_fechas.fin}</dd>
-              </div>
-              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
-                <dt className="truncate text-sm font-medium text-secondary">Total de Partos</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-primary">{reporteData.total_partos}</dd>
-              </div>
-              <div className="overflow-hidden rounded-lg bg-surface p-5 shadow">
-                <dt className="truncate text-sm font-medium text-secondary">Total de Recién Nacidos</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-primary">{reporteData.total_recien_nacidos}</dd>
-              </div>
+      {/* --- RESULTADOS DEL REPORTE --- */}
+      {data && (
+        <div className="space-y-8 animate-fade-in">
+          
+          {/* 1. SECCIÓN A: PARTOS */}
+          <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-primary">Sección A: Información General de Partos</h3>
             </div>
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-              <div>
-                {/* 8. REFACTOR: text-white -> text-primary */}
-                <h3 className="text-xl font-semibold text-primary">Sección A: Partos por Tipo</h3>
-                {/* 9. REFACTOR: Tabla (igual que en pasos anteriores) */}
-                <div className="mt-4 overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-surface">
-                      <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Tipo de Parto</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border bg-surface">
-                      {reporteData.seccion_A_partos_por_tipo.map((item) => (
-                        <tr key={item.tipo_parto__nombre}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{item.tipo_parto__nombre || 'No especificado'}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{item.total}</td>
-                        </tr>
-                      ))}
+            <table className="w-full">
+              <tbody>
+                <tr><Td><strong>Total Partos</strong></Td><Td align="right" className="text-lg font-bold">{data.seccion_a.total_partos}</Td></tr>
+                <tr><Td className="pl-8">Parto Vaginal Espontáneo</Td><Td align="right">{data.seccion_a.vaginal_espontaneo}</Td></tr>
+                <tr><Td className="pl-8">Parto Vaginal Instrumental</Td><Td align="right">{data.seccion_a.vaginal_instrumental}</Td></tr>
+                <tr><Td className="pl-8">Cesárea Electiva</Td><Td align="right">{data.seccion_a.cesarea_electiva}</Td></tr>
+                <tr><Td className="pl-8">Cesárea Urgencia</Td><Td align="right">{data.seccion_a.cesarea_urgencia}</Td></tr>
+                <tr><Td className="text-secondary italic">Con uso de Oxitocina</Td><Td align="right" className="text-secondary">{data.seccion_a.con_oxitocina}</Td></tr>
+                <tr><Td className="text-secondary italic">Con Ligadura Tardía de Cordón</Td><Td align="right" className="text-secondary">{data.seccion_a.con_ligadura_tardia}</Td></tr>
+                <tr><Td className="text-secondary italic">Con Contacto Piel a Piel</Td><Td align="right" className="text-secondary">{data.seccion_a.con_piel_a_piel}</Td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 2. SECCIÓN D.1: PESOS */}
+          <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-primary">Sección D.1: Información General RN Vivos (Peso)</h3>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr><Th>Rango de Peso</Th><Th align="right">Cantidad</Th></tr>
+              </thead>
+              <tbody>
+                <tr><Td>Menos de 500g</Td><Td align="right">{data.seccion_d1.peso_menor_500}</Td></tr>
+                <tr><Td>500 - 999g</Td><Td align="right">{data.seccion_d1.peso_500_999}</Td></tr>
+                <tr><Td>1000 - 1499g</Td><Td align="right">{data.seccion_d1.peso_1000_1499}</Td></tr>
+                <tr><Td>1500 - 1999g</Td><Td align="right">{data.seccion_d1.peso_1500_1999}</Td></tr>
+                <tr><Td>2000 - 2499g</Td><Td align="right">{data.seccion_d1.peso_2000_2499}</Td></tr>
+                <tr><Td>2500 - 2999g</Td><Td align="right">{data.seccion_d1.peso_2500_2999}</Td></tr>
+                <tr><Td>3000 - 3999g</Td><Td align="right">{data.seccion_d1.peso_3000_3999}</Td></tr>
+                <tr><Td>4000g y más</Td><Td align="right">{data.seccion_d1.peso_mayor_4000}</Td></tr>
+                <tr className="bg-red-50 dark:bg-red-900/20"><Td className="text-red-700 dark:text-red-300 font-medium">Con Anomalía Congénita</Td><Td align="right" className="text-red-700 dark:text-red-300 font-bold">{data.seccion_d1.con_anomalia}</Td></tr>
+                <tr className="bg-gray-100 dark:bg-gray-700"><Td><strong>TOTAL NACIDOS VIVOS</strong></Td><Td align="right"><strong>{data.seccion_d1.total_rn}</strong></Td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* 3. SECCIÓN D.2: ATENCIÓN INMEDIATA */}
+          <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-primary">Sección D.2: Atención Inmediata del RN</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+                <table className="w-full border-r border-border">
+                    <thead><tr><Th colSpan="2" align="center">Profilaxis y Tipo Parto (RN)</Th></tr></thead>
+                    <tbody>
+                        <tr><Td>Profilaxis Ocular</Td><Td align="right">{data.seccion_d2.profilaxis_ocular}</Td></tr>
+                        <tr><Td>Vacuna Hepatitis B</Td><Td align="right">{data.seccion_d2.profilaxis_hepb}</Td></tr>
+                        <tr><Td className="border-t-4 border-gray-100 dark:border-gray-700">RN por Parto Vaginal</Td><Td align="right" className="border-t-4 border-gray-100 dark:border-gray-700">{data.seccion_d2.rn_vaginal}</Td></tr>
+                        <tr><Td>RN por Parto Instrumental</Td><Td align="right">{data.seccion_d2.rn_instrumental}</Td></tr>
+                        <tr><Td>RN por Cesárea</Td><Td align="right">{data.seccion_d2.rn_cesarea}</Td></tr>
                     </tbody>
-                  </table>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-primary">Sección D.1: Peso de Recién Nacidos</h3>
-                <div className="mt-4 overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-surface">
-                      <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Rango de Peso</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border bg-surface">
-                      {Object.entries(reporteData.seccion_D1_pesos_recien_nacidos).map(([key, value]) => (
-                        <tr key={key}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{pesosRNCategorias[key] || key}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{value}</td>
-                        </tr>
-                      ))}
+                </table>
+                <table className="w-full">
+                    <thead><tr><Th colSpan="2" align="center">Condición del Recién Nacido</Th></tr></thead>
+                    <tbody>
+                        <tr><Td>APGAR 1' ≤ 3</Td><Td align="right">{data.seccion_d2.apgar_1_min_lte_3}</Td></tr>
+                        <tr><Td>APGAR 5' ≤ 6</Td><Td align="right">{data.seccion_d2.apgar_5_min_lte_6}</Td></tr>
+                        <tr><Td className="border-t-4 border-gray-100 dark:border-gray-700">Reanimación Básica</Td><Td align="right" className="border-t-4 border-gray-100 dark:border-gray-700">{data.seccion_d2.reanimacion_basica}</Td></tr>
+                        <tr><Td>Reanimación Avanzada</Td><Td align="right">{data.seccion_d2.reanimacion_avanzada}</Td></tr>
                     </tbody>
-                  </table>
-                </div>
-              </div>
+                </table>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* 4. SECCIÓN E: ALIMENTACIÓN AL ALTA (MATRIZ) */}
+          <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-primary">Sección E: Alimentación al Alta</h3>
+            </div>
+            <table className="w-full text-center">
+              <thead>
+                <tr>
+                  <Th align="left">Tipo Alimentación</Th>
+                  <Th align="center">Total General</Th>
+                  <Th align="center">Pueblos Originarios</Th>
+                  <Th align="center">Migrantes</Th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <Td className="font-medium">Lactancia Materna Exclusiva</Td>
+                  <Td align="center" className="font-bold text-accent-mint">{data.seccion_e.lme_total}</Td>
+                  <Td align="center">{data.seccion_e.lme_pueblo}</Td>
+                  <Td align="center">{data.seccion_e.lme_migrante}</Td>
+                </tr>
+                <tr>
+                  <Td className="font-medium">Lactancia Mixta</Td>
+                  <Td align="center" className="font-bold">{data.seccion_e.mixta_total}</Td>
+                  <Td align="center">{data.seccion_e.mixta_pueblo}</Td>
+                  <Td align="center">{data.seccion_e.mixta_migrante}</Td>
+                </tr>
+                <tr>
+                  <Td className="font-medium">Fórmula Artificial</Td>
+                  <Td align="center" className="font-bold">{data.seccion_e.formula_total}</Td>
+                  <Td align="center">{data.seccion_e.formula_pueblo}</Td>
+                  <Td align="center">{data.seccion_e.formula_migrante}</Td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }

@@ -1,110 +1,88 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_otp import devices_for_user
-
-from .models import CustomUser
-from auditoria.signals import registrar_login # signal de auditoría
-
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django.contrib.auth import login
 
-# genera el QR en memoria
+from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from django.utils import timezone
+from auditoria.models import HistorialSesion, HistorialAccion
+from auditoria.signals import registrar_login
+from auditoria.mixins import AuditoriaMixin
+
 import qrcode
 import qrcode.image.svg
 import io
 import base64
 
-from rest_framework import viewsets, status
-from rest_framework.permissions import IsAdminUser
-from rest_framework.decorators import action
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from .serializers import UserSerializer
+
+from .models import CustomUser, Equipo, SolicitudClave
+from .serializers import (
+    UserSerializer, 
+    EquipoSerializer, 
+    UserOptionSerializer, 
+    SolicitudClaveSerializer
+)
+
+from .permissions import IsDoctorUser, IsAdminRol
+
+User = get_user_model()
 
 
 class LoginAPIView(APIView):
-    """
-    API View para el primer paso del login: Usuario y Contraseña.
-    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     def post(self, request, *args, **kwargs):
         username = request.data.get('username')
         password = request.data.get('password')
 
         if not username or not password:
-            return Response(
-                {"error": "Por favor, ingrese usuario y contraseña"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Ingrese usuario y contraseña"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = authenticate(username=username, password=password)
 
         if not user:
-            return Response(
-                {"error": "Credenciales inválidas"}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        # --- LÓGICA 2FA ---
+        if not user.is_active:
+            return Response({"error": "Usuario inactivo"}, status=status.HTTP_401_UNAUTHORIZED)
+
         devices = list(devices_for_user(user))
         
         if not devices:
-            # ¡Caso nuevo! El usuario es válido pero no tiene 2FA
-            # Le enviamos un token temporal para que pueda configurar 2FA.
-            # NO le damos un token de acceso completo.
-            
-            # (Nota: Usar un token JWT temporal aquí es más seguro,
-            # pero por simplicidad, vamos a crear un "estado" para el frontend)
-            
-            # --- MODIFICACIÓN ---
-            # En lugar de un error 403, devolvemos un nuevo "step"
-            return Response(
-                {"step": "2fa_setup_required", "username": user.username}, 
-                status=status.HTTP_200_OK
-            )
+            return Response({"step": "2fa_setup_required", "username": user.username}, status=status.HTTP_200_OK)
 
-        # Si tiene dispositivos, continuamos al paso de verificación
-        return Response(
-            {"step": "2fa_required", "username": user.username}, 
-            status=status.HTTP_200_OK
-        )
+        return Response({"step": "2fa_required", "username": user.username}, status=status.HTTP_200_OK)
+
 
 class Verify2FAAPIView(APIView):
-    """
-    API View para el segundo paso del login: Verificar el token 2FA (OTP).
-    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     def post(self, request, *args, **kwargs):
         username = request.data.get('username')
         otp_token = request.data.get('otp_token')
 
         if not username or not otp_token:
-            return Response(
-                {"error": "Se requiere usuario y código 2FA"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Faltan datos"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = CustomUser.objects.get(username=username)
-        except CustomUser.DoesNotExist:
-            return Response(
-                {"error": "Usuario no encontrado"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # Verificamos el token 2FA
         for device in devices_for_user(user):
             if device.verify_token(otp_token):
-                # ¡Token válido! Generamos los tokens JWT
                 refresh = RefreshToken.for_user(user)
-                
-                # Registramos el login en tu app 'auditoria'
-                # (Necesitamos pasar el 'request' a la signal)
                 try:
-                    registrar_login(sender=CustomUser, request=request, user=user)
-                except Exception as e:
-                    # Opcional: manejar si la signal falla
-                    print(f"Error al registrar login en auditoría: {e}")
+                    registrar_login(sender=User, request=request, user=user)
+                except Exception:
+                    pass
 
                 return Response({
                     'refresh': str(refresh),
@@ -113,95 +91,58 @@ class Verify2FAAPIView(APIView):
                         'id': user.id,
                         'username': user.username,
                         'rol': user.rol,
-                        'rut': user.rut, #
+                        'rut': user.rut, 
+                        'nombre': f"{user.first_name} {user.last_name}".strip() or user.username
                     }
                 }, status=status.HTTP_200_OK)
         
-        # Si el loop termina, el token fue inválido
-        return Response(
-            {"error": "Código 2FA inválido"}, 
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        return Response({"error": "Código 2FA inválido"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class Generate2FAAPIView(APIView):
-    """
-    API View para generar un nuevo dispositivo 2FA (TOTP).
-    No requiere autenticación, solo un nombre de usuario válido
-    que NO tenga 2FA configurado.
-    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     def post(self, request, *args, **kwargs):
         username = request.data.get('username')
-        if not username:
-            return Response({"error": "Username requerido"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            user = CustomUser.objects.get(username=username)
-        except CustomUser.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # Si el usuario YA tiene 2FA, no generamos uno nuevo.
-        if list(devices_for_user(user)):
-            return Response({"error": "Este usuario ya tiene 2FA configurado."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Borrar dispositivos antiguos sin confirmar (si los hubiera)
         TOTPDevice.objects.filter(user=user, confirmed=False).delete()
-        
-        # Crear un nuevo dispositivo 2FA
         device = user.totpdevice_set.create(confirmed=False)
         
-        # Generar el QR code como un string SVG
         img = qrcode.make(device.config_url, image_factory=qrcode.image.svg.SvgImage)
         buffer = io.BytesIO()
         img.save(buffer)
         
-        # Convertir el SVG a un Data URL (Base64)
         svg_data = buffer.getvalue().decode()
-        qr_code_data_url = f"data:image/svg+xml;base64,{base64.b64encode(svg_data.encode('utf-8')).decode('utf-8')}"
+        qr_code = f"data:image/svg+xml;base64,{base64.b64encode(svg_data.encode('utf-8')).decode('utf-8')}"
 
-        return Response({
-            "qr_code_data": qr_code_data_url,
-            "secret_key": device.key  # Opcional, para mostrar "key"
-        }, status=status.HTTP_200_OK)
+        return Response({"qr_code_data": qr_code, "secret_key": device.key}, status=200)
 
 
 class VerifySetup2FAAPIView(APIView):
-    """
-    API View para verificar y confirmar el 2FA por primera vez.
-    Si tiene éxito, loguea al usuario y devuelve tokens JWT.
-    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
     def post(self, request, *args, **kwargs):
         username = request.data.get('username')
         otp_token = request.data.get('otp_token')
-
-        if not username or not otp_token:
-            return Response({"error": "Se requiere usuario y código 2FA"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            user = CustomUser.objects.get(username=username)
-        except CustomUser.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
 
-        # Encontrar el dispositivo NO CONFIRMADO que acabamos de generar
         device = user.totpdevice_set.filter(confirmed=False).first()
-        
         if not device:
-             return Response({"error": "No se encontró un dispositivo 2FA pendiente de configuración."}, status=status.HTTP_400_BAD_REQUEST)
+             return Response({"error": "No hay configuración pendiente"}, status=400)
 
-        # Verificar el token
         if device.verify_token(otp_token):
-            # ¡Éxito! El token es válido, marcamos el dispositivo como confirmado
             device.confirmed = True
             device.save()
-            
-            try:
-                # 'login' actualiza el last_login del usuario
-                login(request, user) 
-                registrar_login(sender=CustomUser, request=request, user=user)
-            except Exception as e:
-                print(f"Error al registrar login en auditoría: {e}")
-
-            # Generar los tokens JWT
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
@@ -210,38 +151,130 @@ class VerifySetup2FAAPIView(APIView):
                     'id': user.id,
                     'username': user.username,
                     'rol': user.rol,
-                    'rut': user.rut,
                 }
-            }, status=status.HTTP_200_OK)
+            }, status=200)
         
-        # El token fue inválido
-        return Response({"error": "Código 2FA inválido"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Código inválido"}, status=401)
 
-class UserViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint que permite a los administradores ver, crear, editar y eliminar usuarios.
-    """
-    queryset = CustomUser.objects.all().order_by('username')
-    serializer_class = UserSerializer
-    # Solo los usuarios marcados como "is_staff" (admin en Django) pueden usar esto.
-    permission_classes = [IsAdminUser] 
 
-    @action(detail=True, methods=['post'], name='Reset 2FA')
-    def reset_2fa(self, request, pk=None):
-        """
-        Acción personalizada para borrar los dispositivos 2FA de un usuario,
-        forzándolo a reconfigurarlo en su próximo inicio de sesión.
-        """
+class SolicitarCambioClaveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        username = request.data.get('username')
         try:
-            user = self.get_object()
-            # Borramos todos los dispositivos TOTP (Autenticador) de este usuario
-            TOTPDevice.objects.filter(user=user).delete()
-            return Response(
-                {'status': 'Dispositivos 2FA eliminados. El usuario deberá reconfigurar en el próximo login.'},
-                status=status.HTTP_200_OK
-            )
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            user = User.objects.get(username=username)
+            if not SolicitudClave.objects.filter(usuario=user, resuelta=False).exists():
+                SolicitudClave.objects.create(usuario=user)
+            return Response({"message": "Solicitud enviada. Contacte al administrador."}, status=200)
+        except User.DoesNotExist:
+            return Response({"message": "Solicitud enviada."}, status=200)
+
+
+
+
+class UserViewSet(AuditoriaMixin, viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('username')
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminRol]
+
+    @action(detail=True, methods=['post'])
+    def reset_2fa(self, request, pk=None):
+        user = self.get_object()
+        TOTPDevice.objects.filter(user=user).delete()
+        self.registrar_accion(user, 'modificacion', f"Admin reseteó 2FA de {user.username}")
+        return Response({'status': '2FA eliminado'}, status=200)
+
+    @action(detail=True, methods=['patch'])
+    def toggle_active(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = not user.is_active
+        user.save()
+        estado = "activado" if user.is_active else "desactivado"
+        self.registrar_accion(user, 'modificacion', f"Admin {estado} al usuario {user.username}")
+        return Response({'status': estado, 'is_active': user.is_active})
+
+
+class SolicitudClaveViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SolicitudClave.objects.filter(resuelta=False).order_by('-fecha_solicitud')
+    serializer_class = SolicitudClaveSerializer
+    permission_classes = [IsAuthenticated, IsAdminRol]
+
+    @action(detail=True, methods=['post'])
+    def marcar_resuelta(self, request, pk=None):
+        solicitud = self.get_object()
+        solicitud.resuelta = True
+        solicitud.save()
+        return Response({"status": "resuelta"})
+
+
+class EquipoViewSet(viewsets.ModelViewSet):
+    serializer_class = EquipoSerializer
+    permission_classes = [IsAuthenticated] 
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'activar']:
+            return [IsAuthenticated(), IsDoctorUser()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.rol == CustomUser.DOCTOR:
+            return Equipo.objects.filter(lider=user).order_by('-created_at')
+        return Equipo.objects.filter(miembros=user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(lider=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def activar(self, request, pk=None):
+        equipo = self.get_object()
+        Equipo.objects.filter(lider=request.user, turno=equipo.turno, activo=True).update(activo=False)
+        equipo.activo = True
+        equipo.save()
+        return Response({'status': 'Equipo activado'})
+
+
+class UserOptionViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserOptionSerializer
+    permission_classes = [IsAuthenticated, IsDoctorUser]
+
+    def get_queryset(self):
+        return User.objects.filter(rol='enfermero', is_active=True).order_by('username')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRol])
+def dashboard_stats(request):
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    inactive_users = total_users - active_users
+    
+    latest_sessions = HistorialSesion.objects.select_related('usuario').order_by('-timestamp')[:5]
+    fmt_sessions = []
+    for s in latest_sessions:
+        fmt_sessions.append({
+            'username': s.usuario.username if s.usuario else 'Sistema',
+            'event_type': s.get_accion_display(),
+            'timestamp': s.timestamp.strftime('%d/%m/%Y %H:%M'),
+            'ip_address': s.ip_address
+        })
+
+    latest_actions = HistorialAccion.objects.select_related('usuario', 'content_type').order_by('-timestamp')[:5]
+    fmt_actions = []
+    for a in latest_actions:
+        fmt_actions.append({
+            'username': a.usuario.username if a.usuario else 'Sistema',
+            'action_type': a.get_accion_display(),
+            'target_object_id': f"{a.content_type.model} (ID: {a.object_id})",
+            'timestamp': a.timestamp.strftime('%d/%m/%Y %H:%M')
+        })
+
+    return Response({
+        'total_users': total_users,
+        'active_users': active_users,
+        'inactive_users': inactive_users,
+        'latest_sessions': fmt_sessions,
+        'latest_actions': fmt_actions,
+    })

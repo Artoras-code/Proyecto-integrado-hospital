@@ -1,70 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { 
-  UsersIcon, 
-  ArrowRightOnRectangleIcon, 
-  PencilSquareIcon,
-  UserPlusIcon,
+import {
+  UsersIcon,
+  ClockIcon,
   ShieldCheckIcon,
-  CogIcon
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
-// Función para formatear la fecha (sin cambios)
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleString('es-CL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+function classNames(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
-    userCount: 0,
-    loginsToday: 0,
-    actionsToday: 0,
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    latestSessions: [],
+    latestActions: [],
   });
-  const [recentSessions, setRecentSessions] = useState([]);
-  const [recentActions, setRecentActions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setUser(userData);
 
-        // Usamos Promise.all para cargar todo en paralelo
-        const [usersRes, sessionsRes, actionsRes] = await Promise.all([
-          apiClient.get('/cuentas/api/users/'),
-          apiClient.get('/auditoria/api/sesiones/'), // Tu API ya ordena por más reciente
-          apiClient.get('/auditoria/api/acciones/')  // Tu API ya ordena por más reciente
-        ]);
-
-        // Procesar estadísticas
-        const loginsToday = sessionsRes.data.filter(
-          s => s.accion === 'login' && s.timestamp.startsWith(today)
-        ).length;
+        const statsResponse = await apiClient.get('/cuentas/api/dashboard/stats/');
         
-        const actionsToday = actionsRes.data.filter(
-          a => a.timestamp.startsWith(today)
-        ).length;
+        if (statsResponse.data) {
+          setStats(prevStats => ({
+            ...prevStats,
+            totalUsers: statsResponse.data.total_users,
+            activeUsers: statsResponse.data.active_users,
+            inactiveUsers: statsResponse.data.inactive_users,
+            latestSessions: statsResponse.data.latest_sessions || [],
+            latestActions: statsResponse.data.latest_actions || [],
+          }));
+        }
 
-        setStats({
-          userCount: usersRes.data.length,
-          loginsToday: loginsToday,
-          actionsToday: actionsToday,
-        });
-
-        // Tomar solo los 5 más recientes para los feeds
-        setRecentSessions(sessionsRes.data.slice(0, 5));
-        setRecentActions(actionsRes.data.slice(0, 5));
-
-      } catch (error) {
-        console.error("Error al cargar el dashboard:", error);
+      } catch (err) {
+        console.error('Error al cargar datos del dashboard:', err);
+        setError('No se pudieron cargar los datos del dashboard.');
       } finally {
         setLoading(false);
       }
@@ -74,122 +56,182 @@ export default function AdminDashboard() {
   }, []);
 
   if (loading) {
-    // 1. REFACTOR: text-white -> text-primary
-    return <h1 className="text-3xl font-bold text-primary">Cargando...</h1>;
+    return (
+      <div className="bg-surface rounded-lg shadow-md p-6 flex items-center justify-center h-48">
+        <p className="text-primary">Cargando datos del dashboard...</p>
+      </div>
+    );
   }
 
-  // Datos para las tarjetas de estadísticas
-  const kpiCards = [
-    { name: 'Usuarios Totales', value: stats.userCount, icon: UsersIcon },
-    { name: 'Inicios de Sesión (Hoy)', value: stats.loginsToday, icon: ArrowRightOnRectangleIcon },
-    { name: 'Acciones (Hoy)', value: stats.actionsToday, icon: PencilSquareIcon },
-  ];
-  
-  // Datos para los atajos rápidos
-  const shortcuts = [
-    { name: 'Crear Usuario', href: '/admin/users', icon: UserPlusIcon },
-    { name: 'Ver Auditoría', href: '/admin/audit', icon: ShieldCheckIcon },
-  ];
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
+        <strong className="font-bold">Error: </strong>
+        <span className="block sm:inline">{error}</span>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* 2. REFACTOR: text-white -> text-primary */}
-      <h1 className="text-3xl font-bold text-primary">Panel del Administrador</h1>
+    <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-y-4">
+        <div>
+          <h1 className="text-5xl lg:text-6xl font-extrabold text-accent-mint uppercase leading-tight tracking-tighter">
+            HOLA, {user?.username ? user.username.toUpperCase() : 'ADMIN'}
+          </h1>
+        </div>
+      </div>
 
-      {/* --- 1. Tarjetas de Estadísticas --- */}
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {kpiCards.map((item) => (
-          // 3. REFACTOR: bg-gray-900 -> bg-surface
-          <div key={item.name} className="overflow-hidden rounded-lg bg-surface shadow">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {/* 4. REFACTOR: text-gray-400 -> text-secondary */}
-                  <item.icon className="h-6 w-6 text-secondary" aria-hidden="true" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    {/* 5. REFACTOR: text-gray-400 -> text-secondary */}
-                    <dt className="truncate text-sm font-medium text-secondary">{item.name}</dt>
-                    {/* 6. REFACTOR: text-white -> text-primary */}
-                    <dd className="text-3xl font-semibold tracking-tight text-primary">{item.value}</dd>
-                  </dl>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-primary">Historial de Sesiones Recientes</h2>
+              <button
+                onClick={() => navigate('/admin/audit')}
+                className="text-sm font-medium text-accent-mint hover:underline"
+              >
+                Ver todos
+              </button>
+            </div>
+            <div className="flow-root">
+              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-0">Usuario</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Tipo de Evento</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha y Hora</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {stats.latestSessions.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="whitespace-nowrap py-4 text-sm text-secondary text-center">No hay sesiones recientes.</td>
+                        </tr>
+                      ) : (
+                        stats.latestSessions.map((session, index) => (
+                          <tr key={index}>
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-0">
+                              {session.username}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
+                              <span className={classNames(
+                                session.event_type.includes('Inicio') ? 'bg-green-100 text-green-700' :
+                                session.event_type.includes('Cierre') ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700',
+                                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium dark:bg-gray-700 dark:text-gray-200'
+                              )}>
+                                {session.event_type}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{session.timestamp}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{session.ip_address}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           </div>
-        ))}
-      </div>
-      
-      {/* --- 2. Atajos Rápidos --- */}
-      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
-         {shortcuts.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            // 7. REFACTOR: bg-gray-900 -> bg-surface, text-white -> text-primary, hover:bg-gray-800 -> hover:bg-border
-            className="flex flex-col items-center justify-center rounded-lg bg-surface p-6 text-primary shadow transition-all hover:bg-border hover:shadow-lg"
-          >
-            <item.icon className="h-10 w-10 text-indigo-400" />
-            <span className="mt-3 text-sm font-medium">{item.name}</span>
-          </Link>
-         ))}
-      </div>
 
-      {/* --- 3. Feeds de Actividad Reciente --- */}
-      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2">
-        
-        {/* Columna de Sesiones */}
-        <div>
-          {/* 8. REFACTOR: text-white -> text-primary */}
-          <h2 className="text-xl font-semibold text-primary">Últimos Inicios de Sesión</h2>
-          {/* 9. REFACTOR: divide-gray-700 -> divide-border */}
-          <ul role="list" className="mt-4 divide-y divide-border">
-            {recentSessions.map((session) => (
-              <li key={session.id} className="flex gap-x-4 py-3">
-                <span className={`flex-none rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                  session.accion === 'login' 
-                    ? 'text-green-200 bg-green-900 ring-green-700' 
-                    : 'text-red-200 bg-red-900 ring-red-700'
-                }`}>
-                  {session.accion === 'login' ? 'Login' : 'Logout'}
-                </span>
-                <div className="text-sm">
-                  {/* 10. REFACTOR: text-white -> text-primary, text-gray-400 -> text-secondary */}
-                  <div className="font-medium text-primary">{session.usuario?.username || 'N/A'}</div>
-                  <div className="text-secondary">{session.ip_address}</div>
+          {/* Tarjeta: Actividad Reciente */}
+          <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-primary">Actividad Reciente</h2>
+              <button
+                onClick={() => navigate('/admin/audit')}
+                className="text-sm font-medium text-accent-mint hover:underline"
+              >
+                Ver todos
+              </button>
+            </div>
+            <div className="flow-root">
+              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-0">Usuario</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Acción</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Objeto Afectado</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha y Hora</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {stats.latestActions.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="whitespace-nowrap py-4 text-sm text-secondary text-center">No hay acciones recientes.</td>
+                        </tr>
+                      ) : (
+                        stats.latestActions.map((action, index) => (
+                          <tr key={index}>
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-0">
+                              {action.username}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
+                              <span className={classNames(
+                                action.action_type === 'Creación' ? 'bg-blue-100 text-blue-700' :
+                                action.action_type === 'Modificación' ? 'bg-yellow-100 text-yellow-700' :
+                                action.action_type === 'Eliminación' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700',
+                                'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium dark:bg-gray-700 dark:text-gray-200'
+                              )}>
+                                {action.action_type}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{action.target_object_id || 'N/A'}</td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{action.timestamp}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="ml-auto text-right text-xs text-secondary">
-                  {formatDate(session.timestamp)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        {/* Columna de Acciones */}
-        <div>
-          <h2 className="text-xl font-semibold text-primary">Últimas Acciones</h2>
-           <ul role="list" className="mt-4 divide-y divide-border">
-            {recentActions.map((action) => (
-              <li key={action.id} className="flex gap-x-4 py-3">
-                <span className="flex-none rounded-md px-2 py-1 text-xs font-medium text-yellow-200 bg-yellow-900 ring-1 ring-inset ring-yellow-700">
-                  {action.accion}
-                </span>
-                <div className="text-sm">
-                  <div className="font-medium text-primary">{action.usuario?.username || 'N/A'}</div>
-                  <div className="text-secondary">
-                    {action.content_type_model} (ID: {action.object_id})
-                  </div>
-                </div>
-                <div className="ml-auto text-right text-xs text-secondary">
-                  {formatDate(action.timestamp)}
-                </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+          </div>
+
         </div>
 
+        {/* Columna Derecha (Paneles de Estado) */}
+        <div className="lg:col-span-1 space-y-6">
+
+          {/* Tarjeta: Estado de Usuarios (ÚNICA TARJETA RESTANTE EN ESTA COLUMNA) */}
+          <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border">
+            <h2 className="text-xl font-semibold text-primary mb-4">Estado de Usuarios</h2>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <p className="text-lg text-secondary">Total Usuarios</p>
+                <p className="text-5xl font-bold text-accent-mint mt-1">{stats.totalUsers}</p>
+              </div>
+              <div>
+                <p className="text-lg text-secondary">Activos</p>
+                <p className="text-5xl font-bold text-green-500 mt-1">{stats.activeUsers}</p>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+                <p className="text-lg text-secondary">Inactivos</p>
+                <p className="text-5xl font-bold text-red-500 mt-1">{stats.inactiveUsers}</p>
+            </div>
+            <div className="mt-6 flex justify-center">
+                <button
+                    onClick={() => navigate('/admin/users')}
+                    className="flex items-center gap-x-2 rounded-lg bg-accent-mint px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accent-mint-hover"
+                >
+                    <UserGroupIcon className="h-5 w-5" />
+                    Gestionar Usuarios
+                </button>
+            </div>
+          </div>
+          
+        </div>
       </div>
     </div>
   );
