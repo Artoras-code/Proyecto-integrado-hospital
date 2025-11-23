@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { EyeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import Pagination from '../components/Pagination'; // <-- Importar
 
-// (Función formatDate sin cambios)
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleString('es-CL', {
@@ -21,19 +21,28 @@ export default function NotificacionesPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // (Lógica de fetchSolicitudes, handleResolver, etc. se mantiene igual)
-  useEffect(() => {
-    fetchSolicitudes();
-  }, []);
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPage, setNextPage] = useState(null);
+  const [prevPage, setPrevPage] = useState(null);
 
-  const fetchSolicitudes = async () => {
+  useEffect(() => {
+    fetchSolicitudes(currentPage);
+  }, [currentPage]);
+
+  const fetchSolicitudes = async (page) => {
     setLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/dashboard/api/solicitudes-correccion/', {
-        params: { estado: 'pendiente' }
-      });
-      setSolicitudes(response.data);
+      const response = await apiClient.get(`/dashboard/api/solicitudes-correccion/?estado=pendiente&page=${page}`);
+      
+      if (response.data.results) {
+        setSolicitudes(response.data.results);
+        setNextPage(response.data.next);
+        setPrevPage(response.data.previous);
+      } else {
+        setSolicitudes(response.data);
+      }
     } catch (err) {
       setError('No se pudieron cargar las solicitudes.');
     } finally {
@@ -47,7 +56,7 @@ export default function NotificacionesPage() {
     }
     try {
       await apiClient.post(`/dashboard/api/solicitudes-correccion/${id}/resolver/`);
-      fetchSolicitudes();
+      fetchSolicitudes(currentPage);
     } catch (err) {
       alert("Error al marcar como resuelta.");
     }
@@ -59,10 +68,7 @@ export default function NotificacionesPage() {
   };
 
   return (
-    // 1. Contenedor principal de la tarjeta flotante
     <div className="bg-surface rounded-lg shadow-md p-6">
-
-      {/* 2. Header de la tarjeta */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Solicitudes de Corrección</h1>
@@ -72,14 +78,11 @@ export default function NotificacionesPage() {
         </div>
       </div>
 
-      {/* --- 3. Tabla de Solicitudes --- */}
       <div className="flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            {/* 4. Nuevo contenedor de la tabla con borde */}
             <div className="overflow-hidden rounded-lg border border-border">
               <table className="min-w-full divide-y divide-border">
-                {/* 5. Cabecera gris claro */}
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Solicitado por</th>
@@ -91,18 +94,10 @@ export default function NotificacionesPage() {
                     </th>
                   </tr>
                 </thead>
-                {/* 6. Cuerpo de tabla blanco (surface) */}
                 <tbody className="divide-y divide-border bg-surface">
-                  {loading && (
-                    <tr>
-                      <td colSpan="5" className="py-4 text-center text-secondary">Cargando solicitudes...</td>
-                    </tr>
-                  )}
-                  {error && (
-                     <tr>
-                      <td colSpan="5" className="py-4 text-center text-red-400">{error}</td>
-                    </tr>
-                  )}
+                  {loading && <tr><td colSpan="5" className="py-4 text-center text-secondary">Cargando...</td></tr>}
+                  {error && <tr><td colSpan="5" className="py-4 text-center text-red-400">{error}</td></tr>}
+                  
                   {!loading && solicitudes.map((solicitud) => (
                     <tr key={solicitud.id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
@@ -110,7 +105,6 @@ export default function NotificacionesPage() {
                         <div className="text-secondary">{solicitud.solicitado_por?.rol || ''}</div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
-                        {/* ¡CAMBIO! Usamos color menta para el ID */}
                         <span className="font-mono text-accent-mint">{solicitud.registro}</span>
                       </td>
                       <td className="whitespace-normal px-3 py-4 text-sm text-secondary max-w-xs truncate">
@@ -121,32 +115,33 @@ export default function NotificacionesPage() {
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-4">
                         <button
                           onClick={handleIrARegistro}
-                          // ¡CAMBIO! Color menta para "Ver"
                           className="text-accent-mint hover:text-accent-mint-hover"
                           title="Ir a gestionar registros"
                         >
                           <EyeIcon className="h-5 w-5" />
-                          <span className="sr-only">Ir a Registro</span>
                         </button>
                         <button
                           onClick={() => handleResolver(solicitud.id)}
-                          // Mantenemos verde para "Resolver" (acción positiva)
                           className="text-green-500 hover:text-green-600"
                           title="Marcar como Resuelta"
                         >
                           <CheckCircleIcon className="h-5 w-5" />
-                          <span className="sr-only">Marcar Resuelta</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                   {!loading && solicitudes.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="py-4 text-center text-secondary">No hay solicitudes pendientes.</td>
-                    </tr>
+                    <tr><td colSpan="5" className="py-4 text-center text-secondary">No hay solicitudes pendientes.</td></tr>
                   )}
                 </tbody>
               </table>
+              
+              <Pagination 
+                currentPage={currentPage}
+                hasNext={!!nextPage}
+                hasPrevious={!!prevPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </div>
         </div>

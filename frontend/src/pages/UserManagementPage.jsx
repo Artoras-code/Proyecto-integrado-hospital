@@ -1,50 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
 import UserFormModal from '../components/UserFormModal'; 
-import { PencilIcon, ShieldExclamationIcon, PlusIcon } from '@heroicons/react/24/outline';
+import Pagination from '../components/Pagination';
+import { 
+  PencilIcon, 
+  ShieldExclamationIcon, 
+  PlusIcon,
+  TrashIcon
+} from '@heroicons/react/24/outline';
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
+  // Estados de Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPage, setNextPage] = useState(null);
+  const [prevPage, setPrevPage] = useState(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null); 
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(currentPage);
+  }, [currentPage]);
 
-  // --- ¡LÓGICA RESTAURADA! ---
-  const fetchUsers = async () => {
+  const fetchUsers = async (page) => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/cuentas/api/users/');
-      setUsers(response.data);
+      const response = await apiClient.get(`/cuentas/api/users/?page=${page}`);
+      
+      if (response.data.results) {
+        setUsers(response.data.results);
+        setNextPage(response.data.next);
+        setPrevPage(response.data.previous);
+      } else {
+        setUsers(response.data);
+      }
     } catch (err) {
       setError('No se pudieron cargar los usuarios.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- ¡LÓGICA RESTAURADA! ---
   const handleOpenModal = (user = null) => {
     setUserToEdit(user); 
     setIsModalOpen(true);
   };
 
-  // --- ¡LÓGICA RESTAURADA! ---
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setUserToEdit(null);
   };
 
-  // --- ¡LÓGICA RESTAURADA! ---
   const handleSaveUser = async (formData) => {
     try {
       let dataToSave = { ...formData };
 
+      // Si estamos editando y la contraseña está vacía, no la enviamos para no sobrescribirla
       if (formData.id && !formData.password) {
         delete dataToSave.password;
       }
@@ -56,14 +72,13 @@ export default function UserManagementPage() {
       }
       
       handleCloseModal(); 
-      fetchUsers(); 
+      fetchUsers(currentPage); 
     } catch (err) {
       console.error('Error al guardar:', err.response?.data);
-      alert('Error al guardar el usuario.');
+      alert('Error al guardar el usuario. Verifique los datos.');
     }
   };
 
-  // --- ¡LÓGICA RESTAURADA! ---
   const handleReset2FA = async (userId, username) => {
     if (window.confirm(`¿Estás seguro de que quieres resetear el 2FA para ${username}? \nEl usuario deberá reconfigurarlo en su próximo inicio de sesión.`)) {
       try {
@@ -75,16 +90,37 @@ export default function UserManagementPage() {
     }
   };
 
+  // --- NUEVA FUNCIÓN: Eliminar Usuario ---
+  const handleDeleteUser = async (userId, username) => {
+    if (window.confirm(`PELIGRO: ¿Estás seguro de eliminar al usuario "${username}"? \nEsta acción es irreversible.`)) {
+      try {
+        await apiClient.delete(`/cuentas/api/users/${userId}/`);
+        // Recargamos la lista para que desaparezca
+        fetchUsers(currentPage);
+      } catch (err) {
+        alert("Error al eliminar usuario.");
+      }
+    }
+  };
+
+  // --- NUEVA FUNCIÓN: Cambiar Estado (Activar/Desactivar) ---
+  const handleToggleActive = async (userId) => {
+    try {
+      await apiClient.patch(`/cuentas/api/users/${userId}/toggle_active/`);
+      // Recargamos para ver el cambio de estado
+      fetchUsers(currentPage);
+    } catch (err) {
+      alert("Error al cambiar el estado del usuario.");
+    }
+  };
 
   return (
-    // Contenedor principal de la tarjeta flotante
     <div className="bg-surface rounded-lg shadow-md p-6">
       
-      {/* Header de la tarjeta */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Gestión de Usuarios</h1>
-          <p className="mt-1 text-sm text-secondary">Crea, edita y gestiona los usuarios del sistema.</p>
+          <p className="mt-1 text-sm text-secondary">Crea, edita, elimina y gestiona los usuarios del sistema.</p>
         </div>
         <button
           onClick={() => handleOpenModal(null)}
@@ -95,7 +131,6 @@ export default function UserManagementPage() {
         </button>
       </div>
 
-      {/* Tabla */}
       <div className="flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -128,43 +163,70 @@ export default function UserManagementPage() {
                     <tr key={user.id}>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{user.username}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.first_name} {user.last_name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.rol}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary capitalize">{user.rol}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.rut || 'N/A'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
-                        {user.is_active ? (
-                          <span className="inline-flex items-center rounded-md bg-green-100 dark:bg-green-900 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-200">Activo</span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-md bg-red-100 dark:bg-red-900 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-200">Inactivo</span>
-                        )}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm">
+                         {/* Botón interactivo para activar/desactivar */}
+                         <button 
+                            onClick={() => handleToggleActive(user.id)}
+                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition-colors
+                              ${user.is_active 
+                                ? 'bg-green-50 text-green-700 ring-green-600/20 hover:bg-green-100' 
+                                : 'bg-red-50 text-red-700 ring-red-600/20 hover:bg-red-100'
+                              }`}
+                            title={user.is_active ? "Click para desactivar acceso" : "Click para activar acceso"}
+                         >
+                            {user.is_active ? 'Activo' : 'Inactivo'}
+                         </button>
                       </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-4">
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-3">
+                        
+                        {/* Reset 2FA */}
                         <button
                           onClick={() => handleReset2FA(user.id, user.username)}
-                          className="text-yellow-500 hover:text-yellow-400"
+                          className="text-yellow-500 hover:text-yellow-600 transition-colors"
                           title="Resetear 2FA"
                         >
                           <ShieldExclamationIcon className="h-5 w-5" />
-                          <span className="sr-only">Resetear 2FA</span>
                         </button>
+
+                        {/* Editar */}
                         <button
                           onClick={() => handleOpenModal(user)}
-                          className="text-accent-mint hover:text-accent-mint-hover"
-                          title="Editar"
+                          className="text-accent-mint hover:text-accent-mint-hover transition-colors"
+                          title="Editar Usuario"
                         >
                           <PencilIcon className="h-5 w-5" />
-                          <span className="sr-only">Editar</span>
                         </button>
+
+                        {/* Eliminar */}
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Eliminar Usuario"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              
+              {/* Paginación */}
+              <Pagination 
+                currentPage={currentPage}
+                hasNext={!!nextPage}
+                hasPrevious={!!prevPage}
+                onPageChange={(newPage) => setCurrentPage(newPage)}
+              />
+
             </div>
           </div>
         </div>
       </div>
 
-      {/* El Modal */}
       <UserFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

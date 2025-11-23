@@ -7,7 +7,9 @@ import {
   ChevronDoubleLeftIcon, 
   ChevronDoubleRightIcon,
   PlusIcon, 
-  XMarkIcon
+  XMarkIcon,
+  ClipboardDocumentCheckIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { NavLink, useNavigate } from 'react-router-dom'; 
 
@@ -18,6 +20,8 @@ export default function SupervisorSidebar({ isSidebarOpen, toggleSidebar, isMobi
   const navigation = [
     { name: 'Inicio', href: '/supervisor/dashboard', icon: HomeIcon },
     { name: 'Ver Registros', href: '/supervisor/registros', icon: TableCellsIcon },
+    { name: 'Historial Altas', href: '/supervisor/altas', icon: ClipboardDocumentCheckIcon },
+    { name: 'Defunciones', href: '/supervisor/defunciones', icon: ExclamationTriangleIcon }, 
     { name: 'Generar Reportes', href: '/supervisor/reportes', icon: DocumentDuplicateIcon },
     { name: 'Solicitudes', href: '/supervisor/notificaciones', icon: BellAlertIcon },
   ];

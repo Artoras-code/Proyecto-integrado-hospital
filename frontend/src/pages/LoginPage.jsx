@@ -12,6 +12,9 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [qrCodeData, setQrCodeData] = useState('');
 
+  // Estado para el modal de "Olvidé mi contraseña"
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState('');
 
   const navigate = useNavigate();
 
@@ -30,7 +33,8 @@ export default function LoginPage() {
         setStep('token');
       } else if (response.data.step === '2fa_setup_required') {
         try {
-          const qrResponse = await apiClient.post('/cuentas/api/auth/2fa/generate/', { 
+          // URL corregida para coincidir con el backend
+          const qrResponse = await apiClient.post('/cuentas/api/auth/setup-2fa/', { 
             username: credentials.username 
           });
           setQrCodeData(qrResponse.data.qr_code_data); 
@@ -52,7 +56,17 @@ export default function LoginPage() {
     localStorage.setItem('accessToken', access);
     localStorage.setItem('refreshToken', refresh);
     localStorage.setItem('user', JSON.stringify(user));
-    navigate('/');
+    
+    // Redirección inteligente según el rol
+    if (user.rol === 'admin') {
+        navigate('/admin/dashboard');
+    } else if (user.rol === 'supervisor') {
+        navigate('/supervisor/dashboard');
+    } else if (user.rol === 'doctor' || user.rol === 'enfermero') {
+        navigate('/clinico/mis-registros');
+    } else {
+        setError('Rol de usuario no reconocido o sin acceso configurado.');
+    }
   };
 
   const handleVerifySubmit = async (tokenData) => {
@@ -75,15 +89,43 @@ export default function LoginPage() {
     setError('');
   };
 
+  // Manejador para enviar la solicitud de cambio de clave
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if(!forgotUsername) return;
+    
+    try {
+        await apiClient.post('/cuentas/api/auth/solicitar-clave/', { username: forgotUsername });
+        alert("Solicitud enviada. Un administrador revisará su caso.");
+        setShowForgotModal(false);
+        setForgotUsername('');
+    } catch (err) {
+        // Por seguridad, a veces es mejor no decir si falló por usuario inexistente,
+        // pero aquí mostramos error genérico o del backend.
+        alert("Error al enviar solicitud. Intente nuevamente.");
+    }
+  };
+
   const renderStep = () => {
     switch(step) {
       case 'credentials':
         return (
-          <LoginForm 
-            onSubmit={handleLoginSubmit} 
-            isLoading={isLoading}
-            error={error}
-          />
+          <>
+            <LoginForm 
+                onSubmit={handleLoginSubmit} 
+                isLoading={isLoading}
+                error={error}
+            />
+            {/* Enlace para recuperar contraseña */}
+            <div className="text-center mt-4">
+                <button 
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-sm text-secondary hover:text-accent-mint hover:underline focus:outline-none"
+                >
+                    ¿Olvidaste tu contraseña?
+                </button>
+            </div>
+          </>
         );
       case 'token':
         return (
@@ -101,7 +143,6 @@ export default function LoginPage() {
             onSetupComplete={loginAndNavigate}
             qrCodeData={qrCodeData} 
           />
-
         );
       default:
         return null;
@@ -109,12 +150,49 @@ export default function LoginPage() {
   }
 
   return (
-
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       
+      {/* MODAL OLVIDÉ CONTRASEÑA */}
+      {showForgotModal && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-surface p-6 rounded-2xl shadow-xl w-full max-w-sm border border-border">
+                <h3 className="text-lg font-bold text-primary mb-2">Recuperar Acceso</h3>
+                <p className="text-sm text-secondary mb-4">
+                    Ingrese su nombre de usuario. Se enviará una notificación al administrador para gestionar el cambio.
+                </p>
+                <form onSubmit={handleForgotPassword}>
+                    <input 
+                        type="text" 
+                        className="w-full p-3 border border-border rounded-lg bg-background text-primary mb-4 focus:ring-2 focus:ring-accent-mint focus:border-transparent outline-none transition-shadow" 
+                        placeholder="Nombre de usuario"
+                        value={forgotUsername}
+                        onChange={e => setForgotUsername(e.target.value)}
+                        required
+                        autoFocus
+                    />
+                    <div className="flex justify-end gap-3">
+                        <button 
+                            type="button" 
+                            onClick={() => setShowForgotModal(false)} 
+                            className="px-4 py-2 text-sm font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="px-4 py-2 text-sm font-bold text-white bg-accent-mint rounded-lg hover:bg-accent-mint-hover shadow-sm transition-colors"
+                        >
+                            Enviar Solicitud
+                        </button>
+                    </div>
+                </form>
+            </div>
+         </div>
+       )}
 
       <div className="flex w-full max-w-6xl min-h-[700px] overflow-hidden rounded-2xl shadow-2xl">
         
+        {/* Panel Izquierdo con Imagen */}
         <div 
           className="hidden lg:flex w-1/2 relative p-12 flex-col justify-between text-white"
           style={{
@@ -123,9 +201,7 @@ export default function LoginPage() {
             backgroundPosition: 'center',
           }}
         >
-
           <div className="absolute inset-0 bg-black opacity-60"></div> 
-
 
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
@@ -147,11 +223,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-
+        {/* Panel Derecho con Formulario */}
         <div className="flex-1 flex items-center justify-center p-12 bg-white dark:bg-zinc-800">
           <div className="w-full max-w-md space-y-8">
             
-
             <div className="flex items-center justify-center mb-6">
               <img src="/logoFooter2.png" alt="Hospital Clínico Herminda Martín de Chillán" className="w-auto h-32" />
             </div>
@@ -170,7 +245,6 @@ export default function LoginPage() {
         </div>
         
       </div>
-
     </div>
   );
 }

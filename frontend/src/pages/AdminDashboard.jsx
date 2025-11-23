@@ -31,7 +31,7 @@ export default function AdminDashboard() {
         const userData = JSON.parse(localStorage.getItem('user'));
         setUser(userData);
 
-        const statsResponse = await apiClient.get('/cuentas/api/dashboard_stats/');
+        const statsResponse = await apiClient.get('/cuentas/api/dashboard/stats/');
         
         if (statsResponse.data) {
           setStats(prevStats => ({

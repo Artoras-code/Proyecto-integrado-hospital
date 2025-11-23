@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { PencilIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import RegistroEditModal from '../components/RegistroEditModal';
+import Pagination from '../components/Pagination'; // <-- Importamos Paginación
 
 const PARAMETROS_FIJOS = {
   tiposParto: [
-    { id: 1, nombre: "Parto Eutócico (Normal)" },
-    { id: 2, nombre: "Cesárea" },
-    { id: 3, nombre: "Fórceps" },
-    { id: 4, nombre: "Vaccum" },
+    { id: 1, nombre: "Parto Vaginal Espontáneo" },
+    { id: 2, nombre: "Parto Vaginal Instrumental (Fórceps)" },
+    { id: 3, nombre: "Parto Vaginal Instrumental (Vacuum)" },
+    { id: 4, nombre: "Cesárea Electiva" },
+    { id: 5, nombre: "Cesárea de Urgencia" },
   ],
   tiposAnalgesia: [
-    { id: 1, nombre: "Epidural" },
-    { id: 2, nombre: "Raquídea" },
-    { id: 3, nombre: "General" },
-    { id: 4, nombre: "Local" },
-    { id: 5, nombre: "Sin Analgesia" },
+    { id: 1, nombre: "Regional: Epidural" },
+    { id: 2, nombre: "Regional: Espinal (Raquídea)" },
+    { id: 3, nombre: "Regional: Combinada" },
+    { id: 4, nombre: "Anestesia General" },
+    { id: 5, nombre: "Inhalatoria (Óxido Nitroso)" },
+    { id: 6, nombre: "Sin Analgesia (Manejo no farmacológico)" },
   ],
 };
 
@@ -31,24 +34,53 @@ export default function GestionRegistrosPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // --- ESTADOS DE PAGINACIÓN ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPage, setNextPage] = useState(null);
+  const [prevPage, setPrevPage] = useState(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
 
-
   useEffect(() => {
-    fetchRegistros();
-  }, []);
+    fetchRegistros(currentPage);
+  }, [currentPage]);
 
-
-  const fetchRegistros = async () => {
+  const fetchRegistros = async (page) => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/dashboard/api/registros-parto/');
-      setRegistros(response.data);
+      // Solicitamos la página específica
+      const response = await apiClient.get(`/dashboard/api/registros-parto/?page=${page}`);
+      
+      // Manejamos la respuesta paginada
+      if (response.data.results) {
+        setRegistros(response.data.results);
+        setNextPage(response.data.next);
+        setPrevPage(response.data.previous);
+      } else {
+        setRegistros(response.data);
+      }
     } catch (err) {
       setError('No se pudieron cargar los registros.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async (id) => {
+    try {
+        const response = await apiClient.get(`/dashboard/api/comprobante/${id}/pdf/`, {
+            responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `comprobante_parto_${id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } catch (err) {
+        alert("Error al descargar el comprobante. " + (err.message || ""));
     }
   };
 
@@ -64,7 +96,7 @@ export default function GestionRegistrosPage() {
 
   const handleSaveSuccess = () => {
     handleCloseModal();
-    fetchRegistros();  
+    fetchRegistros(currentPage);  
   };
 
   return (
@@ -100,18 +132,12 @@ export default function GestionRegistrosPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-surface">
-                  
                   {loading && (
-                    <tr>
-                      <td colSpan="5" className="py-4 text-center text-secondary">Cargando registros...</td>
-                    </tr>
+                    <tr><td colSpan="5" className="py-4 text-center text-secondary">Cargando registros...</td></tr>
                   )}
                   {error && (
-                     <tr>
-                      <td colSpan="5" className="py-4 text-center text-red-400">{error}</td>
-                    </tr>
+                     <tr><td colSpan="5" className="py-4 text-center text-red-400">{error}</td></tr>
                   )}
-
                   
                   {!loading && registros.map((registro) => (
                     <tr key={registro.id}>
@@ -124,20 +150,36 @@ export default function GestionRegistrosPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                         {registro.recien_nacidos.length}
                       </td>
+                      
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <button
+                            onClick={() => handleDownloadPDF(registro.id)}
+                            className="text-blue-500 hover:text-blue-400 mr-4"
+                            title="Descargar Comprobante"
+                        >
+                            <PrinterIcon className="h-5 w-5" />
+                        </button>
                         <button
                           onClick={() => handleEdit(registro)}
                           className="text-accent-mint hover:text-accent-mint-hover"
                           title="Editar"
                         >
                           <PencilIcon className="h-5 w-5" />
-                          <span className="sr-only">Editar</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {/* --- PAGINACIÓN --- */}
+              <Pagination 
+                currentPage={currentPage}
+                hasNext={!!nextPage}
+                hasPrevious={!!prevPage}
+                onPageChange={setCurrentPage}
+              />
+
             </div>
           </div>
         </div>

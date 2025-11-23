@@ -1,32 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
+import Pagination from './Pagination'; 
 
 export default function SessionLog() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPage, setNextPage] = useState(null);
+  const [prevPage, setPrevPage] = useState(null);
+
   useEffect(() => {
-    const fetchLogs = async () => {
-      setLoading(true);
-      try {
-        const response = await apiClient.get('/auditoria/api/sesiones/');
+    fetchLogs(currentPage);
+  }, [currentPage]); 
+
+  const fetchLogs = async (page) => {
+    setLoading(true);
+    try {
+
+      const response = await apiClient.get(`/auditoria/api/sesiones/?page=${page}`);
+      
+
+      if (response.data.results) {
+        setLogs(response.data.results);
+        setNextPage(response.data.next);
+        setPrevPage(response.data.previous);
+      } else {
+
         setLogs(response.data);
-      } catch (err) {
-        setError('No se pudo cargar el historial de sesiones.');
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchLogs();
-  }, []);
+    } catch (err) {
+      setError('No se pudo cargar el historial de sesiones.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    // 1. ¡ELIMINADOS! Quitamos los divs exteriores (flow-root, overflow-x, etc)
-    // El div de la tabla ahora es el contenedor principal
     <div className="overflow-hidden rounded-lg border border-border">
       <table className="min-w-full divide-y divide-border">
-        {/* 2. Cabecera (thead) con fondo gris claro */}
         <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Usuario</th>
@@ -35,11 +50,11 @@ export default function SessionLog() {
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha y Hora</th>
           </tr>
         </thead>
-        {/* 3. Cuerpo (tbody) con fondo blanco (surface) */}
+        {/* Cuerpo */}
         <tbody className="divide-y divide-border bg-surface">
           {loading && (
             <tr>
-              <td colSpan="4" className="py-4 text-center text-secondary">Cargando...</td>
+              <td colSpan="4" className="py-4 text-center text-secondary">Cargando historial...</td>
             </tr>
           )}
           {error && (
@@ -70,6 +85,14 @@ export default function SessionLog() {
           ))}
         </tbody>
       </table>
+
+
+      <Pagination 
+        currentPage={currentPage}
+        hasNext={!!nextPage}
+        hasPrevious={!!prevPage}
+        onPageChange={(newPage) => setCurrentPage(newPage)}
+      />
     </div>
   );
 }

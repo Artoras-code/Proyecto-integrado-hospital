@@ -7,6 +7,16 @@ from .models import (
 from auditoria.serializers import SimpleUserSerializer
 
 
+class TipoPartoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoParto
+        fields = '__all__'
+
+class TipoAnalgesiaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoAnalgesia
+        fields = '__all__'
+# -------------------------------------------------------
 
 class MadreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,26 +30,22 @@ class RecienNacidoSerializer(serializers.ModelSerializer):
 
 
 class RegistroPartoWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = RegistroParto
         fields = '__all__' 
 
 
 class MisRegistrosWriteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = RegistroParto
         exclude = ('registrado_por',) 
 
 
-
 class RegistroPartoReadSerializer(serializers.ModelSerializer):
     madre = MadreSerializer(read_only=True)
-    
-
     tipo_parto = serializers.StringRelatedField(read_only=True)
     tipo_analgesia = serializers.StringRelatedField(read_only=True)
+    registrado_por = SimpleUserSerializer(read_only=True)
 
     recien_nacidos = RecienNacidoSerializer(many=True, read_only=True) 
 
@@ -52,7 +58,6 @@ class RegistroPartoReadSerializer(serializers.ModelSerializer):
             'complicaciones_texto',
             'recien_nacidos'
         ]
-
 
 
 class SolicitudCorreccionSerializer(serializers.ModelSerializer):

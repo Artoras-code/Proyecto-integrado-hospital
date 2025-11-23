@@ -16,7 +16,7 @@ export default function Setup2FAFlow({ username, onSetupComplete, qrCodeData }) 
     setError('');
     
     try {
-      const response = await apiClient.post('/cuentas/api/auth/2fa/verify-setup/', {
+      const response = await apiClient.post('/cuentas/api/auth/verify-setup/', {
         username,
         otp_token: otpToken,
       });

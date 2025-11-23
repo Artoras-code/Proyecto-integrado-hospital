@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { BellAlertIcon, InboxIcon } from '@heroicons/react/24/outline'; 
+import { BellAlertIcon, InboxIcon, PrinterIcon } from '@heroicons/react/24/outline'; 
+import Pagination from '../components/Pagination';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -13,18 +14,30 @@ export default function MisRegistrosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPage, setNextPage] = useState(null);
+  const [prevPage, setPrevPage] = useState(null);
 
   useEffect(() => {
-    fetchMisRegistros();
-  }, []);
+    fetchMisRegistros(currentPage);
+  }, [currentPage]);
 
-  const fetchMisRegistros = async () => {
+  const fetchMisRegistros = async (page) => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/dashboard/api/mis-registros/');
-      setRegistros(response.data);
+      const response = await apiClient.get(`/dashboard/api/mis-registros/?page=${page}`);
+      
+
+      if (response.data.results) {
+        setRegistros(response.data.results);
+        setNextPage(response.data.next);
+        setPrevPage(response.data.previous);
+      } else {
+        setRegistros(response.data);
+      }
     } catch (err) {
       setError('No se pudieron cargar tus registros.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -53,6 +66,24 @@ export default function MisRegistrosPage() {
     }
   };
 
+  const handleDownloadPDF = async (id) => {
+    try {
+        const response = await apiClient.get(`/dashboard/api/comprobante/${id}/pdf/`, {
+            responseType: 'blob', // Importante para archivos binarios
+        });
+        // Truco para descargar desde el navegador
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `comprobante_parto_${id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } catch (err) {
+        alert("Error al descargar el comprobante. " + (err.message || ""));
+        console.error(err);
+    }
+  };
 
   return (
     <div className="bg-surface rounded-lg shadow-md p-6">
@@ -62,8 +93,6 @@ export default function MisRegistrosPage() {
           <p className="mt-1 text-sm text-secondary">Registros que has ingresado personalmente.</p>
         </div>
       </div>
-
-
 
       <div className="flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -123,7 +152,18 @@ export default function MisRegistrosPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                         {registro.recien_nacidos.length}
                       </td>
+                      
                       <td className="relative whitespace-nowrap px-3 py-4 text-right text-sm font-medium sm:pr-6">
+                        
+                        <button
+                            onClick={() => handleDownloadPDF(registro.id)}
+                            className="text-blue-500 hover:text-blue-400 mr-4"
+                            title="Descargar Comprobante"
+                        >
+                            <PrinterIcon className="h-5 w-5" />
+                            <span className="sr-only">Descargar Comprobante</span>
+                        </button>
+                        
                         <button
                           onClick={() => handleSolicitarCorreccion(registro.id)}
                           className="text-yellow-500 hover:text-yellow-400"
@@ -137,6 +177,14 @@ export default function MisRegistrosPage() {
                   ))}
                 </tbody>
               </table>
+              
+              <Pagination 
+                currentPage={currentPage}
+                hasNext={!!nextPage}
+                hasPrevious={!!prevPage}
+                onPageChange={(newPage) => setCurrentPage(newPage)}
+              />
+
             </div>
           </div>
         </div>
