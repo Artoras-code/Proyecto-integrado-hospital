@@ -14,6 +14,7 @@ router.register(r'registros-parto', api_views.RegistroPartoViewSet, basename='re
 router.register(r'mis-registros', api_views.MisRegistrosViewSet, basename='mis-registros')
 router.register(r'solicitudes-correccion', api_views.SolicitudCorreccionViewSet, basename='solicitud-correccion')
 router.register(r'historial-altas', api_views.HistorialAltasViewSet, basename='historial-altas')
+router.register(r'historial-altas-madres', api_views.HistorialAltasMadresViewSet, basename='historial-altas-madres')
 router.register(r'altas-validadas', api_views.RecienNacidosAltaValidadaViewSet, basename='altas-validadas')
 
 urlpatterns = [
