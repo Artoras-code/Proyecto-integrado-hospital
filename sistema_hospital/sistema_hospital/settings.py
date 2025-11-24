@@ -149,10 +149,7 @@ SIMPLE_JWT = {
 
 
 # --- CORS (Conexión con Frontend) ---
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",                       # Para desarrollo local
-    "https://proyecto-integrado-hospital.vercel.app" # Tu frontend en Vercel
-]
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Si tienes problemas de conexión al principio, puedes descomentar esto temporalmente:
 # CORS_ALLOW_ALL_ORIGINS = True
