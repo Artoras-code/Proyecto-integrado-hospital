@@ -64,6 +64,13 @@ class HistorialAltasViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return RecienNacido.objects.filter(fecha_alta__isnull=False).order_by('-fecha_alta')
 
+class HistorialAltasMadresViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = MadreSerializer
+    permission_classes = [IsAuthenticated, IsSupervisorUser]
+    def get_queryset(self):
+        return Madre.objects.filter(fecha_alta__isnull=False).order_by('-fecha_alta')
+
+
 class RecienNacidosAltaValidadaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RecienNacidoSerializer
     permission_classes = [IsAuthenticated, IsSupervisorUser]
