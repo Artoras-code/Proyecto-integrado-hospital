@@ -247,34 +247,49 @@ class UserOptionViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminRol])
 def dashboard_stats(request):
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
-    inactive_users = total_users - active_users
-    
-    latest_sessions = HistorialSesion.objects.select_related('usuario').order_by('-timestamp')[:5]
-    fmt_sessions = []
-    for s in latest_sessions:
-        fmt_sessions.append({
-            'username': s.usuario.username if s.usuario else 'Sistema',
-            'event_type': s.get_accion_display(),
-            'timestamp': s.timestamp.strftime('%d/%m/%Y %H:%M'),
-            'ip_address': s.ip_address
+    try:
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        inactive_users = total_users - active_users
+        latest_sessions = HistorialSesion.objects.select_related('usuario').order_by('-timestamp')[:5]
+        fmt_sessions = []
+        for s in latest_sessions:
+            fmt_sessions.append({
+                'username': s.usuario.username if s.usuario else 'Sistema',
+                'event_type': s.get_accion_display(),
+                'timestamp': s.timestamp.strftime('%d/%m/%Y %H:%M'),
+                'ip_address': s.ip_address
+            })
+
+
+        latest_actions = HistorialAccion.objects.select_related('usuario', 'content_type').order_by('-timestamp')[:5]
+        fmt_actions = []
+        for a in latest_actions:
+            try:
+                modelo_afectado = a.content_type.model if a.content_type else "Objeto desconocido"
+                obj_id = a.object_id or "?"
+            except Exception:
+                modelo_afectado = "Error ref"
+                obj_id = "?"
+
+            fmt_actions.append({
+                'username': a.usuario.username if a.usuario else 'Sistema',
+                'action_type': a.get_accion_display(),
+                'target_object_id': f"{modelo_afectado} (ID: {obj_id})",
+                'timestamp': a.timestamp.strftime('%d/%m/%Y %H:%M')
+            })
+
+        return Response({
+            'total_users': total_users,
+            'active_users': active_users,
+            'inactive_users': inactive_users,
+            'latest_sessions': fmt_sessions,
+            'latest_actions': fmt_actions,
         })
 
-    latest_actions = HistorialAccion.objects.select_related('usuario', 'content_type').order_by('-timestamp')[:5]
-    fmt_actions = []
-    for a in latest_actions:
-        fmt_actions.append({
-            'username': a.usuario.username if a.usuario else 'Sistema',
-            'action_type': a.get_accion_display(),
-            'target_object_id': f"{a.content_type.model} (ID: {a.object_id})",
-            'timestamp': a.timestamp.strftime('%d/%m/%Y %H:%M')
+    except Exception as e:
+        print(f"ERROR DASHBOARD STATS: {str(e)}")
+        return Response({
+            'total_users': 0, 'active_users': 0, 'inactive_users': 0,
+            'latest_sessions': [], 'latest_actions': []
         })
-
-    return Response({
-        'total_users': total_users,
-        'active_users': active_users,
-        'inactive_users': inactive_users,
-        'latest_sessions': fmt_sessions,
-        'latest_actions': fmt_actions,
-    })
