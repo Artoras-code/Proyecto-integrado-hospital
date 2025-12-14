@@ -15,12 +15,11 @@ from auditoria.mixins import AuditoriaMixin
 from auditoria.models import HistorialAccion
 from django.contrib.contenttypes.models import ContentType
 
-# --- NUEVAS IMPORTACIONES PARA EL PDF PROFESIONAL ---
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape, legal
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.pagesizes import letter 
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 
 from cuentas.permissions import (
     IsSupervisorUser, 
@@ -347,6 +346,7 @@ class ExportReporteREMPDFView(APIView):
     permission_classes = [IsAuthenticated, IsSupervisorUser]
 
     def get(self, request, *args, **kwargs):
+        # 1. Validar fechas
         try:
             f_inicio_str = request.query_params.get('fecha_inicio')
             f_fin_str = request.query_params.get('fecha_fin')
@@ -358,176 +358,198 @@ class ExportReporteREMPDFView(APIView):
         # 2. Obtener Datos
         data = calcular_datos_rem(fi, ff)
         
-        # 3. Configurar PDF
+        # 3. Configurar PDF (Formato CARTA VERTICAL)
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
-            pagesize=landscape(legal), # Legal Landscape para que quepan las tablas anchas
-            rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30
+            pagesize=letter, # Vertical estándar
+            rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50
         )
         
         elements = []
         styles = getSampleStyleSheet()
         
-        # --- Estilos Personalizados ---
-        style_title = ParagraphStyle('CustomTitle', parent=styles['Title'], fontSize=16, leading=20, alignment=TA_CENTER, spaceAfter=20)
-        style_subtitle = ParagraphStyle('CustomSub', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#2c3e50'), spaceBefore=15, spaceAfter=5)
-        style_cell_center = ParagraphStyle('CellCenter', parent=styles['Normal'], alignment=TA_CENTER, fontSize=9)
-        style_cell_left = ParagraphStyle('CellLeft', parent=styles['Normal'], alignment=TA_LEFT, fontSize=9)
-        style_cell_header = ParagraphStyle('CellHeader', parent=styles['Normal'], alignment=TA_CENTER, fontSize=9, fontName='Helvetica-Bold', textColor=colors.white)
+        # --- Estilos Personalizados "Tipo Informe" ---
+        # Título Principal
+        style_title = ParagraphStyle(
+            'ReportTitle', 
+            parent=styles['Heading1'], 
+            fontSize=16, 
+            alignment=TA_CENTER, 
+            textColor=colors.HexColor('#1a237e'), # Azul oscuro institucional
+            spaceAfter=10
+        )
+        
+        # Subtítulos de Sección
+        style_section = ParagraphStyle(
+            'SectionHeader', 
+            parent=styles['Heading2'], 
+            fontSize=12, 
+            textColor=colors.HexColor('#0d47a1'), 
+            spaceBefore=15, 
+            spaceAfter=5,
+            borderPadding=5,
+            borderColor=colors.HexColor('#e0e0e0'),
+            borderWidth=0,
+            backColor=None # Sin fondo, más limpio
+        )
 
-        # --- Encabezado Institucional ---
-        header_data = [
-            [Paragraph("<b>MINISTERIO DE SALUD</b><br/>Servicio de Salud Ñuble<br/>Hospital Clínico Herminda Martín", style_cell_left),
-             Paragraph(f"<b>INFORME ESTADÍSTICO MENSUAL (REM A.24)</b><br/>Periodo: {f_inicio_str} al {f_fin_str}", style_cell_center)]
-        ]
-        t_header = Table(header_data, colWidths=[300, 450])
-        t_header.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('LINEBELOW', (0,0), (-1,-1), 1, colors.black),
-        ]))
-        elements.append(t_header)
+        # Texto normal para celdas
+        style_cell_header = ParagraphStyle('HeaderCell', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', textColor=colors.HexColor('#1a237e'), alignment=TA_LEFT)
+        style_cell_data = ParagraphStyle('DataCell', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=TA_LEFT)
+        style_cell_num = ParagraphStyle('NumCell', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=TA_CENTER)
+
+        # --- FUNCIÓN AUXILIAR PARA ESTILOS DE TABLA LIMPIOS ---
+        def get_clean_table_style():
+            return TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('LINEBELOW', (0,0), (-1,0), 1.5, colors.HexColor('#1a237e')), # Línea gruesa bajo encabezado
+                ('LINEBELOW', (0,1), (-1,-1), 0.5, colors.lightgrey), # Líneas finas entre filas
+                ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#1a237e')),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                ('TOPPADDING', (0,0), (-1,-1), 6),
+            ])
+
+        # --- ENCABEZADO ---
+        # Logo o Texto institucional simple y elegante
+        elements.append(Paragraph("SERVICIO DE SALUD ÑUBLE", styles['Normal']))
+        elements.append(Paragraph("<b>HOSPITAL CLÍNICO HERMINDA MARTÍN</b>", styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        elements.append(Paragraph("INFORME ESTADÍSTICO REM A.24", style_title))
+        elements.append(Paragraph(f"Periodo de Análisis: {f_inicio_str} al {f_fin_str}", ParagraphStyle('Sub', parent=styles['Normal'], alignment=TA_CENTER)))
+        elements.append(Spacer(1, 10))
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.lightgrey))
         elements.append(Spacer(1, 20))
 
         # ---------------------------------------------------------------------
-        # TABLA RESUMEN EJECUTIVO (KPIs)
+        # 1. RESUMEN EJECUTIVO
         # ---------------------------------------------------------------------
-        elements.append(Paragraph("I. RESUMEN GENERAL Y DEMOGRAFÍA", style_subtitle))
+        elements.append(Paragraph("I. Resumen Ejecutivo y Demografía", style_section))
         
+        # Tabla simple de 2 columnas para KPIs
         d_resumen = [
-            ['INDICADOR', 'CANTIDAD', 'INDICADOR', 'CANTIDAD'],
-            ['Total Partos', data['a']['total_partos'], 'Mortalidad Materna', data['mort']['materna']],
-            ['Total Nacidos Vivos', data['d1']['total_rn'], 'Mortalidad Neonatal', data['mort']['neonatal']],
-            ['Cesáreas (Total)', data['a']['cesarea_electiva'] + data['a']['cesarea_urgencia'], 'Madres Adolescentes (<18)', data['demo']['adolescente']],
-            ['Prematuros (<37 sem)', data['a']['pretermino'], 'Madres Extranjeras', data['demo']['extranjera']],
+            [Paragraph('Indicador Clave', style_cell_header), Paragraph('Valor', style_cell_header)],
+            ['Total de Partos Registrados', data['a']['total_partos']],
+            ['Total Recién Nacidos Vivos', data['d1']['total_rn']],
+            ['Cesáreas (Total)', data['a']['cesarea_electiva'] + data['a']['cesarea_urgencia']],
+            ['Madres Adolescentes (<18 años)', data['demo']['adolescente']],
+            ['Madres Extranjeras', data['demo']['extranjera']],
+            ['Mortalidad Neonatal en Periodo', data['mort']['neonatal']],
         ]
         
-        t_resumen = Table(d_resumen, colWidths=[150, 80, 150, 80])
-        t_resumen.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#34495e')),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('BACKGROUND', (0,1), (-1,-1), colors.whitesmoke),
-        ]))
+        # Usamos anchos relativos a carta (aprox 500pt ancho útil)
+        t_resumen = Table(d_resumen, colWidths=[350, 150])
+        t_resumen.setStyle(get_clean_table_style())
         elements.append(t_resumen)
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 20))
 
         # ---------------------------------------------------------------------
-        # SECCIÓN A: CARACTERIZACIÓN DEL PARTO
+        # SECCIÓN A: PARTO Y GESTACIÓN
         # ---------------------------------------------------------------------
-        elements.append(Paragraph("SECCIÓN A: CARACTERIZACIÓN DEL PARTO Y GESTACIÓN", style_subtitle))
+        elements.append(Paragraph("II. Caracterización del Parto", style_section))
         
+        # Para que no se vea ancho, dividimos conceptualmente: Tipos vs Condiciones
         d_seccion_a = [
-            [Paragraph('TIPO DE PARTO', style_cell_header), Paragraph('TOTAL', style_cell_header), Paragraph('CONDICIONES CLÍNICAS', style_cell_header), Paragraph('TOTAL', style_cell_header)],
-            ['Parto Vaginal Espontáneo', data['a']['vaginal_espontaneo'], 'Uso de Oxitocina', data['a']['con_oxitocina']],
-            ['Parto Vaginal Instrumental', data['a']['vaginal_instrumental'], 'Ligadura Tardía Cordón', data['a']['con_ligadura_tardia']],
-            ['Cesárea Electiva', data['a']['cesarea_electiva'], 'Contacto Piel a Piel', data['a']['con_piel_a_piel']],
-            ['Cesárea Urgencia', data['a']['cesarea_urgencia'], 'Edad Gest. < 37 sem', data['a']['pretermino']],
-            ['', '', 'Edad Gest. > 42 sem', data['a']['posttermino']],
+            [Paragraph('Tipo de Parto / Condición', style_cell_header), Paragraph('Cantidad', style_cell_header)],
+            # Grupo Partos
+            [Paragraph('<b>Por Vía del Parto</b>', style_cell_data), ''],
+            ['   - Parto Vaginal Espontáneo', data['a']['vaginal_espontaneo']],
+            ['   - Parto Vaginal Instrumental', data['a']['vaginal_instrumental']],
+            ['   - Cesárea Electiva', data['a']['cesarea_electiva']],
+            ['   - Cesárea de Urgencia', data['a']['cesarea_urgencia']],
+            # Grupo Condiciones
+            [Paragraph('<b>Condiciones Clínicas</b>', style_cell_data), ''],
+            ['   - Uso de Oxitocina', data['a']['con_oxitocina']],
+            ['   - Ligadura Tardía de Cordón', data['a']['con_ligadura_tardia']],
+            ['   - Contacto Piel a Piel', data['a']['con_piel_a_piel']],
+            # Grupo Edad Gestacional
+            [Paragraph('<b>Edad Gestacional</b>', style_cell_data), ''],
+            ['   - Pretérmino (< 37 semanas)', data['a']['pretermino']],
+            ['   - Post-término (> 42 semanas)', data['a']['posttermino']],
         ]
         
-        t_a = Table(d_seccion_a, colWidths=[200, 60, 200, 60])
+        t_a = Table(d_seccion_a, colWidths=[350, 150])
+        t_a.setStyle(get_clean_table_style())
+        # Estilo adicional para los subtítulos dentro de la tabla (negritas)
         t_a.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2980b9')),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-            ('ALIGN', (1,1), (1,-1), 'CENTER'),
-            ('ALIGN', (3,1), (3,-1), 'CENTER'),
-            ('SPAN', (0,5), (1,5)),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f5f5f5')), # Fondo sutil encabezado grupo
+            ('BACKGROUND', (0,6), (-1,6), colors.HexColor('#f5f5f5')),
+            ('BACKGROUND', (0,10), (-1,10), colors.HexColor('#f5f5f5')),
         ]))
         elements.append(t_a)
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 20))
 
         # ---------------------------------------------------------------------
-        # SECCIÓN D.1: RECIÉN NACIDO (PESO Y SEXO)
+        # SECCIÓN D.1: RECIÉN NACIDO (PESO)
         # ---------------------------------------------------------------------
-        elements.append(Paragraph("SECCIÓN D.1: RECIÉN NACIDO (PESO AL NACER)", style_subtitle))
+        # Hacemos salto de página si queda poco espacio, opcional.
+        # elements.append(PageBreak()) 
+        
+        elements.append(Paragraph("III. Estadísticas del Recién Nacido (Peso)", style_section))
         
         d_d1 = [
-            ['RANGO DE PESO (gramos)', 'CANTIDAD', 'SEXO DEL RN', 'CANTIDAD'],
-            ['< 500 g', data['d1']['p_lt_500'], 'Masculino', data['d1']['sexo_m']],
-            ['500 - 999 g', data['d1']['p_500_999'], 'Femenino', data['d1']['sexo_f']],
-            ['1000 - 1499 g', data['d1']['p_1000_1499'], 'Indeterminado', data['d1']['sexo_i']],
-            ['1500 - 1999 g', data['d1']['p_1500_1999'], '', ''],
-            ['2000 - 2499 g', data['d1']['p_2000_2499'], 'OTROS INDICADORES', ''],
-            ['2500 - 2999 g', data['d1']['p_2500_2999'], 'Anomalía Congénita', data['d1']['con_anomalia']],
-            ['3000 - 3999 g', data['d1']['p_3000_3999'], '', ''],
-            ['≥ 4000 g', data['d1']['p_gte_4000'], '', ''],
-            ['TOTAL', data['d1']['total_rn'], '', ''],
+            [Paragraph('Rango de Peso', style_cell_header), Paragraph('Total', style_cell_header), Paragraph('Sexo (M/F)', style_cell_header)],
+            ['< 1500 g (Muy bajo peso)', data['d1']['peso_menor_1500'], f"{data['d1']['sexo_m']} / {data['d1']['sexo_f']}"],
+            ['1500 - 2499 g (Bajo peso)', data['d1']['peso_1500_2499'], ''],
+            ['2500 - 3999 g (Peso normal)', data['d1']['peso_2500_3999'], ''],
+            ['≥ 4000 g (Macrosomía)', data['d1']['peso_mayor_4000'], ''],
+            [Paragraph('<b>TOTAL NACIDOS VIVOS</b>', style_cell_data), Paragraph(f"<b>{data['d1']['total_rn']}</b>", style_cell_data), ''],
         ]
 
-        t_d1 = Table(d_d1, colWidths=[150, 60, 150, 60])
-        t_d1.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8e44ad')),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-            ('ALIGN', (1,0), (1,-1), 'CENTER'),
-            ('ALIGN', (3,0), (3,-1), 'CENTER'),
-            ('BACKGROUND', (0, -1), (1, -1), colors.lightgrey),
-            ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
-        ]))
+        t_d1 = Table(d_d1, colWidths=[250, 100, 150])
+        t_d1.setStyle(get_clean_table_style())
         elements.append(t_d1)
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 20))
 
         # ---------------------------------------------------------------------
         # SECCIÓN D.2: ATENCIÓN INMEDIATA
         # ---------------------------------------------------------------------
-        elements.append(Paragraph("SECCIÓN D.2: ATENCIÓN INMEDIATA Y REANIMACIÓN", style_subtitle))
-
-        d_d2 = [
-            ['PROFILAXIS', 'Cant.', 'CONDICIÓN / APGAR', 'Cant.', 'REANIMACIÓN', 'Cant.'],
-            ['Ocular (Eritromicina)', data['d2']['profilaxis_ocular'], "Apgar 1' ≤ 3", data['d2']['apgar_1_critico'], 'Básica', data['d2']['reanimacion_basica']],
-            ['Vacuna Hepatitis B', data['d2']['profilaxis_hepb'], "Apgar 5' ≤ 6", data['d2']['apgar_5_critico'], 'Avanzada', data['d2']['reanimacion_avanzada']],
-            ['', '', '', '', '(Masaje/Drogas)', '']
-        ]
-
-        t_d2 = Table(d_d2, colWidths=[120, 40, 120, 40, 120, 40])
-        t_d2.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#27ae60')),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-            ('ALIGN', (1,0), (1,-1), 'CENTER'),
-            ('ALIGN', (3,0), (3,-1), 'CENTER'),
-            ('ALIGN', (5,0), (5,-1), 'CENTER'),
-        ]))
-        elements.append(t_d2)
-        elements.append(Spacer(1, 15))
-
-        # ---------------------------------------------------------------------
-        # SECCIÓN E: ALIMENTACIÓN AL ALTA
-        # ---------------------------------------------------------------------
-        elements.append(Paragraph("SECCIÓN E: ALIMENTACIÓN AL ALTA (Desglose)", style_subtitle))
+        elements.append(Paragraph("IV. Atención Inmediata y Reanimación", style_section))
         
-        d_e = [
-            ['TIPO ALIMENTACIÓN', 'TOTAL GENERAL', 'PUEBLOS ORIGINARIOS', 'POBLACIÓN MIGRANTE'],
-            ['Lactancia Materna Excl.', data['e']['lme_total'], data['e']['lme_pueblo'], data['e']['lme_migrante']],
-            ['Lactancia Mixta', data['e']['mixta_total'], data['e']['mixta_pueblo'], data['e']['mixta_migrante']],
-            ['Fórmula Artificial', data['e']['formula_total'], data['e']['formula_pueblo'], data['e']['formula_migrante']],
+        d_d2 = [
+            [Paragraph('Indicador', style_cell_header), Paragraph('Casos', style_cell_header)],
+            ['Apgar min 1 critico (≤ 3)', data['d2']['apgar_1_critico']],
+            ['Apgar min 5 critico (≤ 6)', data['d2']['apgar_5_critico']],
+            ['Reanimación Básica', data['d2']['reanimacion_basica']],
+            ['Reanimación Avanzada', data['d2']['reanimacion_avanzada']],
+            ['Profilaxis Ocular Entregada', data['d2']['profilaxis_ocular']],
+            ['Vacuna Hepatitis B Administrada', data['d2']['profilaxis_hepb']],
+            ['Anomalía Congénita Detectada', data['d1']['con_anomalia']],
         ]
 
-        t_e = Table(d_e, colWidths=[180, 100, 120, 120])
-        t_e.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#d35400')),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-            ('ALIGN', (1,0), (-1,-1), 'CENTER'),
-        ]))
+        t_d2 = Table(d_d2, colWidths=[350, 150])
+        t_d2.setStyle(get_clean_table_style())
+        elements.append(t_d2)
+        elements.append(Spacer(1, 20))
+        
+        # ---------------------------------------------------------------------
+        # SECCIÓN E: ALIMENTACIÓN
+        # ---------------------------------------------------------------------
+        elements.append(Paragraph("V. Alimentación al Alta", style_section))
+        
+        # Tabla compacta
+        d_e = [
+            [Paragraph('Tipo', style_cell_header), Paragraph('Total', style_cell_header), Paragraph('Migrantes', style_cell_header)],
+            ['Lactancia Materna Exclusiva', data['e']['lme_total'], data['e']['lme_migrante']],
+            ['Lactancia Mixta', data['e']['mixta_total'], data['e']['mixta_migrante']],
+            ['Fórmula Artificial', data['e']['formula_total'], data['e']['formula_migrante']],
+        ]
+        
+        t_e = Table(d_e, colWidths=[250, 100, 150])
+        t_e.setStyle(get_clean_table_style())
         elements.append(t_e)
 
-        # Footer Simple
+        # Footer
         elements.append(Spacer(1, 40))
-        elements.append(Paragraph(f"Generado por Sistema Hospitalario el {datetime.now().strftime('%d/%m/%Y %H:%M')}", style_cell_left))
+        elements.append(Paragraph("Documento generado automáticamente por Sistema de Gestión Hospitalaria.", ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)))
+        elements.append(Paragraph(f"Fecha de emisión: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ParagraphStyle('FooterTime', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)))
 
         doc.build(elements)
         buffer.seek(0)
         
         response = HttpResponse(buffer, content_type='application/pdf')
-        filename = f"REM_A24_{f_inicio_str}_al_{f_fin_str}.pdf"
+        filename = f"Informe_REM_A24_{f_inicio_str}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
