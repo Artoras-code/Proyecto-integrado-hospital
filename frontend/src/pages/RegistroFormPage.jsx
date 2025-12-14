@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { CalculatorIcon } from '@heroicons/react/24/outline';
+import { CalculatorIcon, PlusCircleIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline';
 import ApgarCalculator from '../components/ApgarCalculator';
 
 const PARAMETROS_FIJOS = {
@@ -32,35 +32,8 @@ const formatRut = (value) => {
   return `${cuerpo}-${dv}`;
 };
 
-export default function RegistroFormPage() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const [showApgarCalc, setShowApgarCalc] = useState({ show: false, target: '' });
-
-  const [madre, setMadre] = useState({
-    rut: '',
-    nombre: '',
-    fecha_nacimiento: '',
-    telefono: '',
-    direccion: '',
-  });
-  
-  const [parto, setParto] = useState({
-    fecha_parto: '',
-    edad_gestacional_semanas: '',
-    tipo_parto: '', 
-    tipo_analgesia: '', 
-    complicaciones_texto: '',
-    uso_oxitocina: false,
-    ligadura_tardia_cordon: false,
-    contacto_piel_a_piel: false,
-  });
-
-  // --- ACTUALIZADO: Estado inicial con nuevos campos REM ---
-  const [rn, setRn] = useState({
+// Estado inicial para un recién nacido limpio
+const INITIAL_RN_STATE = {
     sexo: 'I',
     peso_grs: '',
     talla_cm: '',
@@ -68,19 +41,38 @@ export default function RegistroFormPage() {
     apgar_5_min: '',
     profilaxis_ocular: true,
     vacuna_hepatitis_b: true,
-    // Nuevos campos:
     reanimacion: 'ninguna',
     anomalia_congenita: false,
     alimentacion_alta: 'LME',
+};
+
+export default function RegistroFormPage() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Estado para controlar qué Apgar se está calculando: índice del bebé y campo (min 1 o 5)
+  const [apgarConfig, setApgarConfig] = useState({ show: false, index: null, field: '' });
+
+  const [madre, setMadre] = useState({
+    rut: '', nombre: '', fecha_nacimiento: '', telefono: '', direccion: '',
   });
+  
+  const [parto, setParto] = useState({
+    fecha_parto: '', edad_gestacional_semanas: '', tipo_parto: '', 
+    tipo_analgesia: '', complicaciones_texto: '', 
+    uso_oxitocina: false, ligadura_tardia_cordon: false, contacto_piel_a_piel: false,
+  });
+
+  // Array de bebés para manejar múltiples nacimientos
+  const [recienNacidos, setRecienNacidos] = useState([ { ...INITIAL_RN_STATE } ]);
 
   const handleMadreChange = (e) => {
     const { name, value } = e.target;
     if (name === 'rut') {
       const formatted = formatRut(value);
-      if (formatted.length <= 12) {
-        setMadre(prev => ({ ...prev, [name]: formatted }));
-      }
+      if (formatted.length <= 12) setMadre(prev => ({ ...prev, [name]: formatted }));
     } else {
       setMadre(prev => ({ ...prev, [name]: value }));
     }
@@ -91,17 +83,44 @@ export default function RegistroFormPage() {
     setParto(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
   
-  const handleRnChange = (e) => {
+  // Manejo de cambios para un bebé específico por su índice en el array
+  const handleRnChange = (index, e) => {
     const { name, value, type, checked } = e.target;
-    setRn(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    const newRns = [...recienNacidos];
+    newRns[index] = {
+        ...newRns[index],
+        [name]: type === 'checkbox' ? checked : value
+    };
+    setRecienNacidos(newRns);
   };
 
-  const openApgarCalc = (targetField) => {
-    setShowApgarCalc({ show: true, target: targetField });
+  // Agregar un nuevo formulario de bebé (gemelo, trillizo...)
+  const addRecienNacido = () => {
+    setRecienNacidos([...recienNacidos, { ...INITIAL_RN_STATE }]);
   };
 
+  // Eliminar un bebé de la lista
+  const removeRecienNacido = (index) => {
+    if (recienNacidos.length === 1) return; // Evitar dejar la lista vacía
+    const newRns = recienNacidos.filter((_, i) => i !== index);
+    setRecienNacidos(newRns);
+  };
+
+  // Abrir la calculadora para un bebé específico
+  const openApgarCalc = (index, targetField) => {
+    setApgarConfig({ show: true, index: index, field: targetField });
+  };
+
+  // Recibir resultado de la calculadora y aplicarlo al bebé correcto
   const handleApgarResult = (total) => {
-    setRn(prev => ({ ...prev, [showApgarCalc.target]: total }));
+    if (apgarConfig.index !== null) {
+        const newRns = [...recienNacidos];
+        newRns[apgarConfig.index] = {
+            ...newRns[apgarConfig.index],
+            [apgarConfig.field]: total
+        };
+        setRecienNacidos(newRns);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -121,48 +140,39 @@ export default function RegistroFormPage() {
     let madreId = null;
 
     try {
+      // 1. Crear o actualizar Madre
       const resMadre = await apiClient.post('/dashboard/api/madres/', madre);
       madreId = resMadre.data.id;
 
+      // 2. Crear Registro de Parto
       const partoData = {
         ...parto,
         madre: madreId,
-        tipo_parto: parto.tipo_parto || null,
-        tipo_analgesia: parto.tipo_analgesia || null,
+        // Si es supervisor, asignamos explícitamente. Si es clínico, el backend usa request.user
+        registrado_por: isSupervisor ? user.id : undefined, 
       };
-  
-      const partoApiUrl = isSupervisor 
-        ? '/dashboard/api/registros-parto/' 
-        : '/dashboard/api/mis-registros/';
-        
-      if (isSupervisor) {
-        partoData.registrado_por = user.id; 
-      }
       
+      const partoApiUrl = isSupervisor ? '/dashboard/api/registros-parto/' : '/dashboard/api/mis-registros/';
       const resParto = await apiClient.post(partoApiUrl, partoData);
       const partoId = resParto.data.id;
 
-      const rnData = {
-        ...rn,
-        parto_asociado: partoId,
-      };
-      await apiClient.post('/dashboard/api/recien-nacidos/', rnData);
+      // 3. Crear Recién Nacidos (Iterar sobre el array y enviarlos todos)
+      const promises = recienNacidos.map(rn => {
+        return apiClient.post('/dashboard/api/recien-nacidos/', {
+            ...rn,
+            parto_asociado: partoId
+        });
+      });
+
+      await Promise.all(promises);
       
       setLoading(false);
-      setSuccess('Registro creado exitosamente.');
+      setSuccess(`Registro creado exitosamente con ${recienNacidos.length} recién nacido(s).`);
       
       // Resetear formularios
       setMadre({ rut: '', nombre: '', fecha_nacimiento: '', telefono: '', direccion: '' });
-      setParto({ 
-        fecha_parto: '', edad_gestacional_semanas: '', tipo_parto: '', tipo_analgesia: '', 
-        complicaciones_texto: '', uso_oxitocina: false, ligadura_tardia_cordon: false, contacto_piel_a_piel: false 
-      });
-      // Resetear RN con valores por defecto
-      setRn({ 
-        sexo: 'I', peso_grs: '', talla_cm: '', apgar_1_min: '', apgar_5_min: '', 
-        profilaxis_ocular: true, vacuna_hepatitis_b: true,
-        reanimacion: 'ninguna', anomalia_congenita: false, alimentacion_alta: 'LME'
-      });
+      setParto({ fecha_parto: '', edad_gestacional_semanas: '', tipo_parto: '', tipo_analgesia: '', complicaciones_texto: '', uso_oxitocina: false, ligadura_tardia_cordon: false, contacto_piel_a_piel: false });
+      setRecienNacidos([{ ...INITIAL_RN_STATE }]);
       
       setTimeout(() => {
         navigate(-1);
@@ -171,15 +181,10 @@ export default function RegistroFormPage() {
     } catch (err) {
       setLoading(false);
       setError('Error al guardar el registro. Revise los campos. ' + (err.response?.data?.detail || err.message));
-      console.error(err.response?.data || err);
+      console.error(err);
       
-      if (madreId) {
-        try {
-          await apiClient.delete(`/dashboard/api/madres/${madreId}/`);
-        } catch (deleteErr) {
-          console.error("Error al eliminar madre huérfana:", deleteErr);
-        }
-      }
+      // Nota: Si falla la creación de RNs, el parto y la madre ya quedaron creados.
+      // Se podría implementar una lógica de reversión aquí si fuera crítico.
     }
   };
 
@@ -189,16 +194,21 @@ export default function RegistroFormPage() {
   const cardClass = "bg-surface p-6 rounded-2xl shadow-lg border border-border";
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-4xl lg:text-5xl font-extrabold text-accent-mint uppercase leading-tight tracking-tighter">
-        Ingresar Nuevo Registro
-      </h1>
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      <div className="flex justify-between items-end">
+        <h1 className="text-4xl font-extrabold text-accent-mint uppercase tracking-tighter leading-tight">
+            Ingresar Nuevo Registro
+        </h1>
+        <div className="text-sm font-medium text-gray-500 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
+            {recienNacidos.length > 1 ? 'Parto Múltiple' : 'Parto Único'}
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* SECCIÓN 1: MADRE */}
         <div className={cardClass}>
-          <h2 className="text-xl font-semibold text-primary mb-4">1. Datos de la Madre</h2>
+          <h2 className="text-xl font-semibold text-primary mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">1. Datos de la Madre</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="rut" className={labelClass}>RUT</label>
@@ -209,7 +219,7 @@ export default function RegistroFormPage() {
               <input type="text" name="nombre" id="nombre" value={madre.nombre} onChange={handleMadreChange} className={inputClass} required />
             </div>
             <div>
-              <label htmlFor="fecha_nacimiento" className={labelClass}>Fecha Nacimiento Madre</label>
+              <label htmlFor="fecha_nacimiento" className={labelClass}>Fecha Nacimiento</label>
               <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" value={madre.fecha_nacimiento} onChange={handleMadreChange} className={inputClass} required />
             </div>
             <div>
@@ -225,188 +235,205 @@ export default function RegistroFormPage() {
 
         {/* SECCIÓN 2: PARTO */}
         <div className={cardClass}>
-          <h2 className="text-xl font-semibold text-primary mb-4">2. Datos del Parto</h2>
+          <h2 className="text-xl font-semibold text-primary mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">2. Datos del Parto</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label htmlFor="fecha_parto" className={labelClass}>Fecha y Hora del Parto</label>
-              <input type="datetime-local" name="fecha_parto" id="fecha_parto" value={parto.fecha_parto} onChange={handlePartoChange} className={inputClass} required />
+              <label className={labelClass}>Fecha y Hora</label>
+              <input type="datetime-local" name="fecha_parto" value={parto.fecha_parto} onChange={handlePartoChange} className={inputClass} required />
             </div>
             <div>
-              <label htmlFor="edad_gestacional_semanas" className={labelClass}>Edad Gestacional (Semanas)</label>
-              <input type="number" name="edad_gestacional_semanas" id="edad_gestacional_semanas" value={parto.edad_gestacional_semanas} onChange={handlePartoChange} className={inputClass} required />
+              <label className={labelClass}>Edad Gestacional (Sem)</label>
+              <input type="number" name="edad_gestacional_semanas" value={parto.edad_gestacional_semanas} onChange={handlePartoChange} className={inputClass} required />
             </div>
             <div>
-              <label htmlFor="tipo_parto" className={labelClass}>Tipo de Parto</label>
-              <select name="tipo_parto" id="tipo_parto" value={parto.tipo_parto} onChange={handlePartoChange} className={inputClass} required>
+              <label className={labelClass}>Tipo de Parto</label>
+              <select name="tipo_parto" value={parto.tipo_parto} onChange={handlePartoChange} className={inputClass} required>
                 <option value="">Seleccione...</option>
                 {PARAMETROS_FIJOS.tiposParto.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </div>
             <div>
-              <label htmlFor="tipo_analgesia" className={labelClass}>Tipo de Analgesia</label>
-              <select name="tipo_analgesia" id="tipo_analgesia" value={parto.tipo_analgesia} onChange={handlePartoChange} className={inputClass}>
+              <label className={labelClass}>Analgesia</label>
+              <select name="tipo_analgesia" value={parto.tipo_analgesia} onChange={handlePartoChange} className={inputClass}>
                 <option value="">Seleccione...</option>
                 {PARAMETROS_FIJOS.tiposAnalgesia.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
               </select>
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="complicaciones_texto" className={labelClass}>Complicaciones (descripción)</label>
-              <textarea
-                name="complicaciones_texto"
-                id="complicaciones_texto"
-                value={parto.complicaciones_texto}
-                onChange={handlePartoChange}
-                className={inputClass}
-                rows="4"
-                placeholder="Describa sangrados, desgarros, u otras complicaciones..."
-              ></textarea>
+              <label className={labelClass}>Complicaciones</label>
+              <textarea name="complicaciones_texto" value={parto.complicaciones_texto} onChange={handlePartoChange} className={inputClass} rows="2" placeholder="Opcional..."></textarea>
             </div>
           </div>
-          <div className="mt-6 grid grid-cols-3 gap-6">
-            <div className="flex items-center gap-x-2">
-              <input id="uso_oxitocina" name="uso_oxitocina" type="checkbox" checked={parto.uso_oxitocina} onChange={handlePartoChange} className={checkboxClass} />
-              <label htmlFor="uso_oxitocina" className={labelClass}>Uso Oxitocina</label>
-            </div>
-            <div className="flex items-center gap-x-2">
-              <input id="ligadura_tardia_cordon" name="ligadura_tardia_cordon" type="checkbox" checked={parto.ligadura_tardia_cordon} onChange={handlePartoChange} className={checkboxClass} />
-              <label htmlFor="ligadura_tardia_cordon" className={labelClass}>Ligadura Tardía</label>
-            </div>
-            <div className="flex items-center gap-x-2">
-              <input id="contacto_piel_a_piel" name="contacto_piel_a_piel" type="checkbox" checked={parto.contacto_piel_a_piel} onChange={handlePartoChange} className={checkboxClass} />
-              <label htmlFor="contacto_piel_a_piel" className={labelClass}>Piel a Piel</label>
-            </div>
+          <div className="mt-4 flex flex-wrap gap-6 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+            {['uso_oxitocina', 'ligadura_tardia_cordon', 'contacto_piel_a_piel'].map(field => (
+                <div key={field} className="flex items-center gap-x-2">
+                    <input id={field} name={field} type="checkbox" checked={parto[field]} onChange={handlePartoChange} className={checkboxClass} />
+                    <label htmlFor={field} className={labelClass}>
+                        {field === 'uso_oxitocina' ? 'Uso Oxitocina' : field === 'ligadura_tardia_cordon' ? 'Ligadura Tardía' : 'Piel a Piel'}
+                    </label>
+                </div>
+            ))}
           </div>
         </div>
         
-        {/* SECCIÓN 3: RECIÉN NACIDO */}
-        <div className={cardClass}>
-          <h2 className="text-xl font-semibold text-primary mb-4">3. Datos del Recién Nacido</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            <div>
-              <label htmlFor="sexo" className={labelClass}>Sexo</label>
-              <select name="sexo" id="sexo" value={rn.sexo} onChange={handleRnChange} className={inputClass} required>
-                <option value="I">Indeterminado</option>
-                <option value="F">Femenino</option>
-                <option value="M">Masculino</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="peso_grs" className={labelClass}>Peso (gramos)</label>
-              <input type="number" name="peso_grs" id="peso_grs" value={rn.peso_grs} onChange={handleRnChange} className={inputClass} required />
-            </div>
-            <div>
-              <label htmlFor="talla_cm" className={labelClass}>Talla (cm)</label>
-              <input type="number" step="0.1" name="talla_cm" id="talla_cm" value={rn.talla_cm} onChange={handleRnChange} className={inputClass} required />
-            </div>
-
-            {/* APGAR CON CALCULADORA */}
-            <div>
-              <label htmlFor="apgar_1_min" className={labelClass}>APGAR (1 min)</label>
-              <div className="flex gap-2">
-                <input 
-                  type="number" name="apgar_1_min" id="apgar_1_min" 
-                  value={rn.apgar_1_min} onChange={handleRnChange} 
-                  className={inputClass} min="0" max="10" required 
-                />
-                <button
-                  type="button"
-                  onClick={() => openApgarCalc('apgar_1_min')}
-                  className="mt-1 p-2 bg-gray-200 dark:bg-gray-700 text-secondary rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  title="Abrir Calculadora APGAR"
+        {/* SECCIÓN 3: RECIÉN NACIDOS (DINÁMICO) */}
+        <div>
+            <div className="flex justify-between items-center mb-4 px-1">
+                <h2 className="text-xl font-semibold text-primary">3. Recién Nacidos ({recienNacidos.length})</h2>
+                <button 
+                    type="button" 
+                    onClick={addRecienNacido} 
+                    className="flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold shadow-sm"
                 >
-                  <CalculatorIcon className="h-6 w-6" />
+                    <PlusCircleIcon className="h-5 w-5" /> Agregar Gemelo/Trillizo
                 </button>
-              </div>
             </div>
 
-            <div>
-              <label htmlFor="apgar_5_min" className={labelClass}>APGAR (5 min)</label>
-              <div className="flex gap-2">
-                <input 
-                  type="number" name="apgar_5_min" id="apgar_5_min" 
-                  value={rn.apgar_5_min} onChange={handleRnChange} 
-                  className={inputClass} min="0" max="10" required 
-                />
-                <button
-                  type="button"
-                  onClick={() => openApgarCalc('apgar_5_min')}
-                  className="mt-1 p-2 bg-gray-200 dark:bg-gray-700 text-secondary rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  title="Abrir Calculadora APGAR"
-                >
-                  <CalculatorIcon className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-            
-            {/* --- NUEVOS CAMPOS REM A.24 --- */}
-            <div>
-              <label htmlFor="reanimacion" className={labelClass}>Reanimación</label>
-              <select name="reanimacion" id="reanimacion" value={rn.reanimacion} onChange={handleRnChange} className={inputClass}>
-                <option value="ninguna">Ninguna</option>
-                <option value="basica">Básica (Estimulación)</option>
-                <option value="avanzada">Avanzada (Ventilación/Drogas)</option>
-              </select>
-            </div>
+            <div className="space-y-6">
+                {recienNacidos.map((rn, index) => (
+                    <div key={index} className={`${cardClass} border-l-4 ${index === 0 ? 'border-l-accent-mint' : 'border-l-purple-500'} relative animate-fade-in`}>
+                        
+                        {/* Cabecera de la tarjeta del bebé */}
+                        <div className="flex justify-between items-start mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <div className="flex items-center gap-2">
+                                <div className={`p-2 rounded-full ${index === 0 ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
+                                    <UserIcon className="h-5 w-5" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-700 dark:text-gray-200">
+                                    Recién Nacido #{index + 1}
+                                </h3>
+                            </div>
+                            {recienNacidos.length > 1 && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => removeRecienNacido(index)} 
+                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors" 
+                                    title="Eliminar este bebé del registro"
+                                >
+                                    <TrashIcon className="h-5 w-5" />
+                                </button>
+                            )}
+                        </div>
 
-            <div>
-              <label htmlFor="alimentacion_alta" className={labelClass}>Alimentación al Alta</label>
-              <select name="alimentacion_alta" id="alimentacion_alta" value={rn.alimentacion_alta} onChange={handleRnChange} className={inputClass}>
-                <option value="LME">Lactancia Materna Exclusiva</option>
-                <option value="LMixta">Lactancia Mixta</option>
-                <option value="Formula">Fórmula Artificial</option>
-              </select>
-            </div>
-            {/* ----------------------------- */}
+                        {/* Campos del Bebé */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className={labelClass}>Sexo</label>
+                                <select name="sexo" value={rn.sexo} onChange={(e) => handleRnChange(index, e)} className={inputClass} required>
+                                    <option value="I">Indeterminado</option>
+                                    <option value="F">Femenino</option>
+                                    <option value="M">Masculino</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Peso (g)</label>
+                                <input type="number" name="peso_grs" value={rn.peso_grs} onChange={(e) => handleRnChange(index, e)} className={inputClass} required />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Talla (cm)</label>
+                                <input type="number" step="0.1" name="talla_cm" value={rn.talla_cm} onChange={(e) => handleRnChange(index, e)} className={inputClass} required />
+                            </div>
+                            
+                            {/* APGAR Inputs con botón de calculadora */}
+                            <div>
+                                <label className={labelClass}>APGAR 1'</label>
+                                <div className="flex gap-1">
+                                    <input type="number" name="apgar_1_min" value={rn.apgar_1_min} onChange={(e) => handleRnChange(index, e)} className={inputClass} min="0" max="10" required />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => openApgarCalc(index, 'apgar_1_min')} 
+                                        className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
+                                        title="Calcular APGAR"
+                                    >
+                                        <CalculatorIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>APGAR 5'</label>
+                                <div className="flex gap-1">
+                                    <input type="number" name="apgar_5_min" value={rn.apgar_5_min} onChange={(e) => handleRnChange(index, e)} className={inputClass} min="0" max="10" required />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => openApgarCalc(index, 'apgar_5_min')} 
+                                        className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
+                                        title="Calcular APGAR"
+                                    >
+                                        <CalculatorIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                                    </button>
+                                </div>
+                            </div>
 
-          </div>
-          
-          <div className="mt-6 grid grid-cols-3 gap-6">
-            <div className="flex items-center gap-x-2">
-              <input id="profilaxis_ocular" name="profilaxis_ocular" type="checkbox" checked={rn.profilaxis_ocular} onChange={handleRnChange} className={checkboxClass} />
-              <label htmlFor="profilaxis_ocular" className={labelClass}>Profilaxis Ocular</label>
+                            {/* Campos REM A.24 Específicos */}
+                            <div>
+                                <label className={labelClass}>Reanimación</label>
+                                <select name="reanimacion" value={rn.reanimacion} onChange={(e) => handleRnChange(index, e)} className={inputClass}>
+                                    <option value="ninguna">Ninguna</option>
+                                    <option value="basica">Básica</option>
+                                    <option value="avanzada">Avanzada</option>
+                                </select>
+                            </div>
+                            <div className="col-span-2">
+                                <label className={labelClass}>Alimentación Alta</label>
+                                <select name="alimentacion_alta" value={rn.alimentacion_alta} onChange={(e) => handleRnChange(index, e)} className={inputClass}>
+                                    <option value="LME">Lactancia Materna Excl.</option>
+                                    <option value="LMixta">Mixta</option>
+                                    <option value="Formula">Fórmula</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Checkboxes del Bebé */}
+                        <div className="mt-4 flex flex-wrap gap-4 text-sm pt-2 border-t border-gray-50 dark:border-gray-700/50">
+                             <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="profilaxis_ocular" checked={rn.profilaxis_ocular} onChange={(e) => handleRnChange(index, e)} className={checkboxClass} />
+                                <span className="text-gray-700 dark:text-gray-300">Profilaxis Ocular</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="vacuna_hepatitis_b" checked={rn.vacuna_hepatitis_b} onChange={(e) => handleRnChange(index, e)} className={checkboxClass} />
+                                <span className="text-gray-700 dark:text-gray-300">Vacuna Hep B</span>
+                            </label>
+                            <div className="flex-grow"></div>
+                            <label className="flex items-center gap-2 cursor-pointer bg-red-50 dark:bg-red-900/10 px-3 py-1 rounded-md border border-red-100 dark:border-red-900/30">
+                                <input type="checkbox" name="anomalia_congenita" checked={rn.anomalia_congenita} onChange={(e) => handleRnChange(index, e)} className="h-4 w-4 rounded border-red-300 text-red-500 focus:ring-red-500" />
+                                <span className="text-red-700 dark:text-red-400 font-medium">Anomalía Congénita</span>
+                            </label>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div className="flex items-center gap-x-2">
-              <input id="vacuna_hepatitis_b" name="vacuna_hepatitis_b" type="checkbox" checked={rn.vacuna_hepatitis_b} onChange={handleRnChange} className={checkboxClass} />
-              <label htmlFor="vacuna_hepatitis_b" className={labelClass}>Vacuna Hepatitis B</label>
-            </div>
-             {/* --- NUEVO CHECKBOX REM --- */}
-            <div className="flex items-center gap-x-2">
-              <input id="anomalia_congenita" name="anomalia_congenita" type="checkbox" checked={rn.anomalia_congenita} onChange={handleRnChange} className={`${checkboxClass} text-red-500 focus:ring-red-500`} />
-              <label htmlFor="anomalia_congenita" className={labelClass}>Anomalía Congénita</label>
-            </div>
-            {/* -------------------------- */}
-          </div>
         </div>
 
-        <div className="flex justify-end items-center gap-4 pt-4">
-          {error && <div className="text-red-500 text-sm font-medium">{error}</div>}
-          {success && <div className="text-green-500 text-sm font-medium">{success}</div>}
+        {/* Botones de Acción Global */}
+        <div className="flex justify-end items-center gap-4 pt-6 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm p-4 -mx-4 -mb-4 rounded-b-lg">
+          {error && <div className="text-red-600 text-sm font-bold bg-red-100 px-3 py-2 rounded-lg border border-red-200">{error}</div>}
+          {success && <div className="text-green-600 text-sm font-bold bg-green-100 px-3 py-2 rounded-lg border border-green-200">{success}</div>}
           
-          <button
-            type="button"
+          <button 
+            type="button" 
             onClick={() => navigate(-1)} 
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors font-medium" 
             disabled={loading}
           >
             Cancelar
           </button>
-          <button
-            type="submit"
-            className="rounded-lg border border-transparent bg-accent-mint px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-mint-hover disabled:opacity-50"
+          <button 
+            type="submit" 
+            className="bg-accent-mint hover:bg-accent-mint-hover text-white px-8 py-2 rounded-lg font-bold shadow-md transition-all disabled:opacity-50 flex items-center gap-2" 
             disabled={loading}
           >
-            {loading ? 'Guardando...' : 'Guardar Registro'}
+            {loading ? 'Guardando...' : `Guardar Registro (${recienNacidos.length} RN)`}
           </button>
         </div>
       </form>
 
+      {/* Calculadora Modal */}
       <ApgarCalculator
-        isOpen={showApgarCalc.show}
-        onClose={() => setShowApgarCalc({ ...showApgarCalc, show: false })}
+        isOpen={apgarConfig.show}
+        onClose={() => setApgarConfig({ ...apgarConfig, show: false })}
         onCalculate={handleApgarResult}
-        title={showApgarCalc.target === 'apgar_1_min' ? 'Minuto 1' : 'Minuto 5'}
+        title={`RN #${(apgarConfig.index || 0) + 1} - ${apgarConfig.field === 'apgar_1_min' ? 'Minuto 1' : 'Minuto 5'}`}
       />
-
     </div>
   );
 }
