@@ -19,7 +19,7 @@ export default function ReportesPage() {
   const handleGenerarReporte = async () => {
     setLoading(true);
     setError('');
-    setData(null); // Limpiar datos anteriores
+    setData(null);
     
     if (!fechaInicio || !fechaFin) {
       setError('Por favor, seleccione una fecha de inicio y fin.');
@@ -81,7 +81,7 @@ export default function ReportesPage() {
     }
   };
 
-  // Componentes auxiliares para celdas de tabla
+
   const Th = ({ children, align = "left", className = "" }) => (
     <th className={`px-4 py-3 bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-${align} ${className}`}>
       {children}
@@ -100,7 +100,7 @@ export default function ReportesPage() {
         Reporte REM A.24
       </h1>
 
-      {/* --- FILTROS Y BOTONES --- */}
+
       <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border mb-8">
         <h2 className="text-xl font-semibold text-primary mb-4">Seleccionar Rango de Fechas</h2>
         <div className="flex flex-col md:flex-row gap-4 items-end">
@@ -149,11 +149,9 @@ export default function ReportesPage() {
         {error && <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg border border-red-200">{error}</div>}
       </div>
 
-      {/* --- RESULTADOS DEL REPORTE --- */}
+
       {data && (
         <div className="space-y-8 animate-fade-in">
-          
-          {/* 1. SECCIÓN A: PARTOS */}
           <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
               <h3 className="text-lg font-bold text-primary">Sección A: Información General de Partos</h3>
@@ -172,7 +170,7 @@ export default function ReportesPage() {
             </table>
           </div>
 
-          {/* 2. SECCIÓN D.1: PESOS */}
+
           <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
               <h3 className="text-lg font-bold text-primary">Sección D.1: Información General RN Vivos (Peso)</h3>
@@ -196,7 +194,6 @@ export default function ReportesPage() {
             </table>
           </div>
 
-          {/* 3. SECCIÓN D.2: ATENCIÓN INMEDIATA */}
           <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
               <h3 className="text-lg font-bold text-primary">Sección D.2: Atención Inmediata del RN</h3>
@@ -224,7 +221,6 @@ export default function ReportesPage() {
             </div>
           </div>
 
-          {/* 4. SECCIÓN E: ALIMENTACIÓN AL ALTA (MATRIZ) */}
           <div className="bg-surface rounded-lg shadow overflow-hidden border border-border">
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-border">
               <h3 className="text-lg font-bold text-primary">Sección E: Alimentación al Alta</h3>

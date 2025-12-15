@@ -15,7 +15,6 @@ export default function DefuncionesPage() {
 
   const handleDownloadCertificado = async (tipo, id) => {
     try {
-        // Llamamos a la nueva ruta
         const response = await apiClient.get(`/dashboard/api/certificado-defuncion/${tipo}/${id}/pdf/`, {
             responseType: 'blob',
         });

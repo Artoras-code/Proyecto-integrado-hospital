@@ -50,7 +50,6 @@ export default function SessionLog() {
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Fecha y Hora</th>
           </tr>
         </thead>
-        {/* Cuerpo */}
         <tbody className="divide-y divide-border bg-surface">
           {loading && (
             <tr>

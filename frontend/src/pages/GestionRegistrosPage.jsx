@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { PencilIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import RegistroEditModal from '../components/RegistroEditModal';
-import Pagination from '../components/Pagination'; // <-- Importamos Paginación
+import Pagination from '../components/Pagination';
 
 const PARAMETROS_FIJOS = {
   tiposParto: [
@@ -33,12 +33,9 @@ export default function GestionRegistrosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  // --- ESTADOS DE PAGINACIÓN ---
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPage, setNextPage] = useState(null);
   const [prevPage, setPrevPage] = useState(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
 
@@ -49,10 +46,8 @@ export default function GestionRegistrosPage() {
   const fetchRegistros = async (page) => {
     setLoading(true);
     try {
-      // Solicitamos la página específica
       const response = await apiClient.get(`/dashboard/api/registros-parto/?page=${page}`);
       
-      // Manejamos la respuesta paginada
       if (response.data.results) {
         setRegistros(response.data.results);
         setNextPage(response.data.next);

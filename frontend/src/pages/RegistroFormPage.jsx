@@ -169,13 +169,11 @@ export default function RegistroFormPage() {
   };
 
   const labelClass = "block text-sm font-medium text-secondary mb-1";
-  const inputClass = "block w-full rounded-lg border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-primary shadow-sm focus:border-accent-mint focus:ring-accent-mint py-2.5 px-3"; // Inputs más grandes
+  const inputClass = "block w-full rounded-lg border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-primary shadow-sm focus:border-accent-mint focus:ring-accent-mint py-2.5 px-3";
   const checkboxClass = "h-5 w-5 rounded border-gray-300 text-accent-mint focus:ring-accent-mint";
-  // Tarjetas con más padding (p-8)
   const cardClass = "bg-surface p-8 rounded-2xl shadow-lg border border-border";
 
   return (
-    // CAMBIO CLAVE: max-w-7xl para usar más ancho de pantalla
     <div className="space-y-8 max-w-7xl mx-auto pb-16 px-4 sm:px-6 lg:px-8">
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-gray-200 dark:border-gray-700 pb-6">
@@ -194,7 +192,7 @@ export default function RegistroFormPage() {
       
       <form onSubmit={handleSubmit} className="space-y-8">
         
-        {/* SECCIÓN 1: MADRE (Grid más espacioso) */}
+
         <div className={cardClass}>
           <h2 className="text-2xl font-bold text-primary mb-6 flex items-center gap-2">
             <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
@@ -225,7 +223,7 @@ export default function RegistroFormPage() {
           </div>
         </div>
 
-        {/* SECCIÓN 2: PARTO */}
+
         <div className={cardClass}>
           <h2 className="text-2xl font-bold text-primary mb-6 flex items-center gap-2">
             <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
@@ -275,7 +273,7 @@ export default function RegistroFormPage() {
           </div>
         </div>
         
-        {/* SECCIÓN 3: RECIÉN NACIDOS */}
+
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-center px-2">
                 <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
@@ -294,7 +292,7 @@ export default function RegistroFormPage() {
             {recienNacidos.map((rn, index) => (
                 <div key={index} className={`${cardClass} border-l-[6px] ${index === 0 ? 'border-l-accent-mint' : 'border-l-purple-500'} relative animate-fade-in`}>
                     
-                    {/* Header Tarjeta Bebé */}
+
                     <div className="flex justify-between items-start mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
                         <div className="flex items-center gap-4">
                             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm ${index === 0 ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
@@ -316,7 +314,7 @@ export default function RegistroFormPage() {
                         )}
                     </div>
 
-                    {/* Grid de Inputs del Bebé (4 columnas en pantallas grandes) */}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                         <div>
                             <label className={labelClass}>Sexo Biológico</label>
@@ -335,7 +333,7 @@ export default function RegistroFormPage() {
                             <input type="number" step="0.1" name="talla_cm" value={rn.talla_cm} onChange={(e) => handleRnChange(index, e)} className={inputClass} placeholder="Ej: 50.5" required />
                         </div>
                         
-                        {/* APGAR Group */}
+
                         <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 lg:col-span-1">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2 text-center">Puntaje APGAR</label>
                             <div className="flex gap-4">
@@ -356,7 +354,7 @@ export default function RegistroFormPage() {
                             </div>
                         </div>
 
-                        {/* Fila 2 de Inputs */}
+
                         <div>
                             <label className={labelClass}>Reanimación Neonatal</label>
                             <select name="reanimacion" value={rn.reanimacion} onChange={(e) => handleRnChange(index, e)} className={inputClass}>
@@ -375,7 +373,7 @@ export default function RegistroFormPage() {
                         </div>
                     </div>
 
-                    {/* Checkboxes Footer */}
+
                     <div className="mt-8 flex flex-wrap gap-6 pt-6 border-t border-gray-100 dark:border-gray-700">
                          <label className="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" name="profilaxis_ocular" checked={rn.profilaxis_ocular} onChange={(e) => handleRnChange(index, e)} className="h-5 w-5 rounded text-accent-mint focus:ring-accent-mint" />
@@ -395,7 +393,7 @@ export default function RegistroFormPage() {
             ))}
         </div>
 
-        {/* Action Bar Flotante */}
+
         <div className="flex justify-end items-center gap-4 pt-6 sticky bottom-0 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-6 border-t border-gray-200 dark:border-gray-700 shadow-up-lg -mx-4 sm:-mx-6 lg:-mx-8 rounded-t-2xl">
           {error && <div className="mr-auto text-red-600 text-sm font-bold bg-red-50 px-4 py-2 rounded-lg border border-red-100 animate-pulse">{error}</div>}
           {success && <div className="mr-auto text-green-600 text-sm font-bold bg-green-50 px-4 py-2 rounded-lg border border-green-100">{success}</div>}

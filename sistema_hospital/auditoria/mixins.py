@@ -22,7 +22,6 @@ class AuditoriaMixin:
         self.registrar_accion(instance, 'modificacion')
 
     def perform_destroy(self, instance):
-        # Guardamos datos antes de borrar para el log
         content_type = ContentType.objects.get_for_model(instance)
         object_id = instance.pk
         str_repr = str(instance)

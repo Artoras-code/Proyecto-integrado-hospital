@@ -6,7 +6,7 @@ import {
   MoonIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  CheckCircleIcon // <-- Nuevo icono para resolver
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { Popover, Transition } from '@headlessui/react'; 
 import { useTheme } from '../context/ThemeContext';
@@ -25,7 +25,6 @@ export default function Header({ onMobileMenuClick }) {
   const [notificationList, setNotificationList] = useState([]);
 
   useEffect(() => {
-    // Lógica para SUPERVISOR (Correcciones)
     if (user && user.rol === 'supervisor') {
       const fetchNotifications = async () => {
         try {
@@ -39,13 +38,10 @@ export default function Header({ onMobileMenuClick }) {
       fetchNotifications();
     }
     
-    // Lógica para ADMIN (Solicitudes de Clave)
     if (user && user.rol === 'admin') {
        const fetchAdminNotifs = async () => {
          try {
-            // Obtenemos las solicitudes de clave pendientes
             const response = await apiClient.get('/cuentas/api/solicitudes-clave/');
-            // La API es paginada, usamos 'results'
             const results = response.data.results || []; 
             setNotificationCount(results.length);
             setNotificationList(results);
@@ -64,12 +60,11 @@ export default function Header({ onMobileMenuClick }) {
     navigate('/login');
   };
   
-  // Función para que el admin resuelva la solicitud de clave
+
   const handleResolvePasswordRequest = async (id) => {
       if(!window.confirm("¿Marcar como resuelta? (Asegúrate de haber cambiado la clave del usuario primero)")) return;
       try {
           await apiClient.post(`/cuentas/api/solicitudes-clave/${id}/marcar_resuelta/`);
-          // Actualizar lista local visualmente
           setNotificationList(prev => prev.filter(n => n.id !== id));
           setNotificationCount(prev => Math.max(0, prev - 1));
       } catch(err) {
@@ -121,7 +116,6 @@ export default function Header({ onMobileMenuClick }) {
                       notificationList.map((item) => (
                         <li key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-between items-start">
                           <div className="flex-1 min-w-0 pr-2">
-                             {/* Renderizado condicional según el tipo de usuario */}
                              {user.rol === 'admin' ? (
                                  <>
                                     <p className="text-sm font-bold text-primary">Usuario: {item.usuario_nombre}</p>
@@ -138,7 +132,7 @@ export default function Header({ onMobileMenuClick }) {
                              )}
                           </div>
                           
-                          {/* Botón de acción rápida solo para Admin */}
+
                           {user.rol === 'admin' && (
                               <button 
                                 onClick={() => handleResolvePasswordRequest(item.id)} 
@@ -158,7 +152,6 @@ export default function Header({ onMobileMenuClick }) {
                   </ul>
                 </div>
                 
-                {/* Footer del popover solo para supervisor (Admin resuelve aquí mismo) */}
                 {user.rol === 'supervisor' && (
                     <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-border">
                       <button 
@@ -198,7 +191,6 @@ export default function Header({ onMobileMenuClick }) {
         "lg:gap-x-4 lg:bg-surface lg:p-3 lg:rounded-2xl lg:shadow-lg lg:border lg:border-border"
       )}>
         
-        {/* Mostramos notificación para Supervisor Y Admin */}
         {(user && (user.rol === 'supervisor' || user.rol === 'admin')) ? (
           <NotificationBell />
         ) : (

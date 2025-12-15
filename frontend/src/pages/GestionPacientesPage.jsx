@@ -24,7 +24,6 @@ export default function GestionPacientesPage() {
   const [fechaAccion, setFechaAccion] = useState(new Date().toISOString().slice(0, 16));
   const [alimentacion, setAlimentacion] = useState('LME');
 
-  // Obtener usuario para verificar rol
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isDoctor = user.rol === 'doctor';
 
@@ -57,7 +56,7 @@ export default function GestionPacientesPage() {
     }
   };
 
-  // ... (Las funciones handleOpenModal, handleCloseModal, handleSubmitAction se mantienen IGUAL) ...
+
   const handleOpenModal = (type, item) => { setModalType(type); setSelectedItem(item); setFechaAccion(new Date().toISOString().slice(0, 16)); };
   const handleCloseModal = () => { setModalType(null); setSelectedItem(null); };
   const handleSubmitAction = async (e) => {
@@ -124,7 +123,6 @@ export default function GestionPacientesPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">ID / RUT</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Nombre / Detalle</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Estado</th>
-              {/* Ocultar columna acciones si no es doctor */}
               {isDoctor && <th className="px-6 py-3 text-right text-xs font-medium text-secondary uppercase tracking-wider">Acciones</th>}
             </tr>
           </thead>
@@ -146,7 +144,7 @@ export default function GestionPacientesPage() {
                   </span>
                 </td>
                 
-                {/* Solo mostrar botones si es Doctor */}
+
                 {isDoctor && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                     <button onClick={() => handleOpenModal('alta', item)} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center">
@@ -167,7 +165,7 @@ export default function GestionPacientesPage() {
         <Pagination currentPage={currentPage} hasNext={!!nextPage} hasPrevious={!!prevPage} onPageChange={setCurrentPage} />
       </div>
 
-      {/* ... (El Modal se mantiene igual, solo se renderiza si modalType no es null) ... */}
+
       {modalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface rounded-lg shadow-xl max-w-md w-full p-6">

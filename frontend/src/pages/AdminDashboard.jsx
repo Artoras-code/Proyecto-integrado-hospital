@@ -141,7 +141,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Tarjeta: Actividad Reciente */}
           <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-primary">Actividad Reciente</h2>
@@ -199,11 +198,7 @@ export default function AdminDashboard() {
           </div>
 
         </div>
-
-        {/* Columna Derecha (Paneles de Estado) */}
         <div className="lg:col-span-1 space-y-6">
-
-          {/* Tarjeta: Estado de Usuarios (ÚNICA TARJETA RESTANTE EN ESTA COLUMNA) */}
           <div className="bg-surface p-6 rounded-2xl shadow-lg border border-border">
             <h2 className="text-xl font-semibold text-primary mb-4">Estado de Usuarios</h2>
             <div className="grid grid-cols-2 gap-4 text-center">

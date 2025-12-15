@@ -10,7 +10,7 @@ import {
   CheckCircleIcon 
 } from '@heroicons/react/24/outline';
 
-// Función para obtener iniciales
+
 const getInitials = (name) => {
   if (!name) return '??';
   return name
@@ -21,7 +21,7 @@ const getInitials = (name) => {
     .toUpperCase();
 };
 
-// Generador de color de fondo aleatorio
+
 const getRandomColor = (id) => {
   const colors = [
     'bg-red-500', 'bg-orange-500', 'bg-amber-500', 
@@ -38,8 +38,6 @@ export default function EquiposPage() {
   const [enfermeros, setEnfermeros] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false); 
-  
-  // Estados de Paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPage, setNextPage] = useState(null);
   const [prevPage, setPrevPage] = useState(null);
@@ -50,7 +48,7 @@ export default function EquiposPage() {
     miembros: [] 
   });
 
-  // Obtener usuario para verificar permisos
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isDoctor = user.rol === 'doctor';
 
@@ -61,7 +59,6 @@ export default function EquiposPage() {
   const fetchData = async (page) => {
     setLoading(true);
     try {
-      // Peticiones simultáneas (Enfermeros solo si es doctor)
       const [resEquipos, resEnfermeros] = await Promise.all([
         apiClient.get(`/cuentas/api/equipos/?page=${page}`),
         isDoctor 
@@ -69,7 +66,7 @@ export default function EquiposPage() {
           : Promise.resolve({ data: [] })
       ]);
 
-      // Manejo de Equipos (Paginado)
+
       if (resEquipos.data.results) {
         setEquipos(resEquipos.data.results);
         setNextPage(resEquipos.data.next);
@@ -78,7 +75,6 @@ export default function EquiposPage() {
         setEquipos(resEquipos.data);
       }
 
-      // Manejo de Enfermeros (Lista)
       if (resEnfermeros.data.results) {
         setEnfermeros(resEnfermeros.data.results);
       } else {
@@ -137,10 +133,7 @@ export default function EquiposPage() {
   };
 
   return (
-    // CONTENEDOR PRINCIPAL: Ancho completo adaptativo
     <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
-      {/* HEADER DE LA PÁGINA */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 w-full">
         <div>
           <h1 className="text-3xl font-extrabold text-primary tracking-tight">
@@ -151,7 +144,6 @@ export default function EquiposPage() {
           </p>
         </div>
         
-        {/* BOTÓN CREAR (Solo Doctores) */}
         {isDoctor && (
           <div className="mt-4 md:mt-0">
             <button
@@ -165,7 +157,6 @@ export default function EquiposPage() {
         )}
       </div>
 
-      {/* GRID DE TARJETAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8 mb-8 w-full">
         
         {equipos.map((equipo) => (
@@ -177,7 +168,6 @@ export default function EquiposPage() {
                 : 'border-transparent shadow-lg hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700'
               }`}
           >
-            {/* Header Tarjeta */}
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
                 <div className={`p-3 rounded-xl ${equipo.turno === 'diurno' ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
@@ -199,7 +189,6 @@ export default function EquiposPage() {
               )}
             </div>
 
-            {/* Miembros */}
             <div className="mb-6">
               <p className="text-xs font-semibold text-secondary uppercase tracking-wider mb-3">Miembros del Equipo</p>
               <div className="flex -space-x-2 overflow-hidden p-1">
@@ -218,7 +207,6 @@ export default function EquiposPage() {
                 {equipo.miembros_detalles.length} {equipo.miembros_detalles.length === 1 ? 'Enfermero/a' : 'Enfermeros/as'}
               </p>
               
-              {/* Mostrar Líder si no es Doctor */}
               {!isDoctor && (
                  <p className="text-xs text-secondary mt-4 font-medium bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg inline-block">
                     Líder: Dr/a. {equipo.lider_nombre}
@@ -226,7 +214,7 @@ export default function EquiposPage() {
               )}
             </div>
 
-            {/* Footer Acciones (Solo Doctores) */}
+
             {isDoctor && (
               <div className="pt-4 border-t border-border flex justify-between items-center">
                  <button
@@ -259,7 +247,7 @@ export default function EquiposPage() {
           </div>
         ))}
 
-        {/* ESTADO VACÍO */}
+
         {equipos.length === 0 && !loading && (
             <div className="col-span-full w-full flex flex-col items-center justify-center p-12 bg-surface border-2 border-dashed border-gray-300 rounded-2xl">
                 <UserGroupIcon className="h-16 w-16 text-gray-300 mb-4" />
@@ -278,7 +266,6 @@ export default function EquiposPage() {
         )}
       </div>
 
-      {/* PAGINACIÓN */}
       {(equipos.length > 0 || currentPage > 1) && (
         <div className="bg-surface rounded-lg border border-border shadow-sm w-full">
             <Pagination 
@@ -290,12 +277,9 @@ export default function EquiposPage() {
         </div>
       )}
 
-      {/* MODAL CREACIÓN (Solo Doctores) */}
       {showModal && isDoctor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all scale-100">
-            
-            {/* Header Modal corregido */}
             <div className="bg-surface px-6 py-4 border-b border-border">
                 <h3 className="text-xl font-bold text-primary">Configurar Nuevo Equipo</h3>
             </div>

@@ -60,7 +60,7 @@ export default function UserManagementPage() {
     try {
       let dataToSave = { ...formData };
 
-      // Si estamos editando y la contraseña está vacía, no la enviamos para no sobrescribirla
+
       if (formData.id && !formData.password) {
         delete dataToSave.password;
       }
@@ -90,12 +90,11 @@ export default function UserManagementPage() {
     }
   };
 
-  // --- NUEVA FUNCIÓN: Eliminar Usuario ---
+
   const handleDeleteUser = async (userId, username) => {
     if (window.confirm(`PELIGRO: ¿Estás seguro de eliminar al usuario "${username}"? \nEsta acción es irreversible.`)) {
       try {
         await apiClient.delete(`/cuentas/api/users/${userId}/`);
-        // Recargamos la lista para que desaparezca
         fetchUsers(currentPage);
       } catch (err) {
         alert("Error al eliminar usuario.");
@@ -103,11 +102,10 @@ export default function UserManagementPage() {
     }
   };
 
-  // --- NUEVA FUNCIÓN: Cambiar Estado (Activar/Desactivar) ---
+
   const handleToggleActive = async (userId) => {
     try {
       await apiClient.patch(`/cuentas/api/users/${userId}/toggle_active/`);
-      // Recargamos para ver el cambio de estado
       fetchUsers(currentPage);
     } catch (err) {
       alert("Error al cambiar el estado del usuario.");
@@ -166,7 +164,6 @@ export default function UserManagementPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary capitalize">{user.rol}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">{user.rut || 'N/A'}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm">
-                         {/* Botón interactivo para activar/desactivar */}
                          <button 
                             onClick={() => handleToggleActive(user.id)}
                             className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition-colors
@@ -181,7 +178,7 @@ export default function UserManagementPage() {
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 space-x-3">
                         
-                        {/* Reset 2FA */}
+
                         <button
                           onClick={() => handleReset2FA(user.id, user.username)}
                           className="text-yellow-500 hover:text-yellow-600 transition-colors"
@@ -190,7 +187,6 @@ export default function UserManagementPage() {
                           <ShieldExclamationIcon className="h-5 w-5" />
                         </button>
 
-                        {/* Editar */}
                         <button
                           onClick={() => handleOpenModal(user)}
                           className="text-accent-mint hover:text-accent-mint-hover transition-colors"
@@ -199,7 +195,7 @@ export default function UserManagementPage() {
                           <PencilIcon className="h-5 w-5" />
                         </button>
 
-                        {/* Eliminar */}
+
                         <button
                           onClick={() => handleDeleteUser(user.id, user.username)}
                           className="text-red-500 hover:text-red-700 transition-colors"
@@ -214,7 +210,7 @@ export default function UserManagementPage() {
                 </tbody>
               </table>
               
-              {/* Paginación */}
+
               <Pagination 
                 currentPage={currentPage}
                 hasNext={!!nextPage}

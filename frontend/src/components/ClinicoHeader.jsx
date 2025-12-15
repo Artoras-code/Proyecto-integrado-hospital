@@ -10,7 +10,7 @@ import {
   SunIcon,
   MoonIcon,
   UsersIcon,
-  DocumentTextIcon // <-- 1. Importamos este nuevo icono
+  DocumentTextIcon 
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,14 +24,14 @@ export default function ClinicoHeader() {
   const isDoctor = user.rol === 'doctor';
   const isEnfermero = user.rol === 'enfermero';
 
-  // Definición de rutas de navegación base
+
   const navigation = [
     { name: 'Mis Registros', href: '/clinico/mis-registros', icon: ClipboardDocumentListIcon },
     { name: 'Nuevo Registro', href: '/clinico/nuevo-registro', icon: PlusCircleIcon },
     { name: 'Pacientes Activos', href: '/clinico/pacientes', icon: UsersIcon }, 
   ];
 
-  // --- 2. NUEVA LÓGICA: Solo el Doctor puede ver Defunciones ---
+
   if (isDoctor) {
     navigation.push({
       name: 'Defunciones',
@@ -40,7 +40,7 @@ export default function ClinicoHeader() {
     });
   }
 
-  // Agregamos el enlace de Equipos para ambos roles
+
   if (isDoctor || isEnfermero) {
     navigation.push({ 
       name: isDoctor ? 'Mis Equipos' : 'Mi Equipo', 
@@ -60,7 +60,7 @@ export default function ClinicoHeader() {
     <header className="bg-surface border border-border sticky top-0 z-40 rounded-2xl shadow-md transition-all">
       <nav className="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8" aria-label="Global">
         
-        {/* LOGO */}
+
         <div className="flex lg:flex-1">
           <Link to="/clinico/mis-registros" className="-m-1.5 p-1.5 flex items-center gap-2">
             <img className="h-8 w-auto" src="/logo_hospital.jpg" alt="Hospital" />
@@ -68,7 +68,6 @@ export default function ClinicoHeader() {
           </Link>
         </div>
 
-        {/* BOTÓN MENÚ MÓVIL */}
         <div className="flex lg:hidden">
           <button
             type="button"
@@ -84,7 +83,6 @@ export default function ClinicoHeader() {
           </button>
         </div>
 
-        {/* NAVEGACIÓN ESCRITORIO */}
         <div className="hidden lg:flex lg:gap-x-6">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
@@ -105,7 +103,7 @@ export default function ClinicoHeader() {
           })}
         </div>
 
-        {/* ACCIONES DERECHA (TEMA, USUARIO, SALIR) */}
+
         <div className="hidden lg:flex lg:flex-1 lg:justify-end items-center gap-4">
             
             {/* Botón Tema */}
@@ -118,7 +116,7 @@ export default function ClinicoHeader() {
               {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6" />}
             </button>
 
-            {/* Info Usuario */}
+
             <div className="text-sm text-right hidden xl:block">
                 <div className="font-medium text-primary">{user.nombre || user.username}</div>
                 <div className="text-xs text-secondary capitalize">{user.rol}</div>
@@ -126,7 +124,7 @@ export default function ClinicoHeader() {
             
             <div className="h-6 w-px bg-border" aria-hidden="true" />
             
-            {/* Botón Salir */}
+
             <button
                 onClick={handleLogout}
                 className="text-sm font-semibold leading-6 text-secondary hover:text-red-500 flex items-center gap-1 transition-colors"
@@ -136,7 +134,7 @@ export default function ClinicoHeader() {
         </div>
       </nav>
 
-      {/* MENÚ MÓVIL DESPLEGABLE */}
+
       {mobileMenuOpen && (
         <div className="lg:hidden bg-surface border-t border-border rounded-b-2xl" role="dialog" aria-modal="true">
           <div className="space-y-1 px-4 pb-3 pt-2">

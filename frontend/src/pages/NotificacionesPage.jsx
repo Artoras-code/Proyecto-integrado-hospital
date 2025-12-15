@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { EyeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import Pagination from '../components/Pagination'; // <-- Importar
+import Pagination from '../components/Pagination';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';

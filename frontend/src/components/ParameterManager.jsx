@@ -3,19 +3,19 @@ import apiClient from '../services/apiClient';
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 /**
- * Un componente genérico para administrar (CRUD) una lista de parámetros.
- * @param {string} title - El título para mostrar (ej. "Tipos de Parto")
- * @param {string} apiUrl - El endpoint de la API (ej. "/dashboard/api/parametros/tipos-parto/")
+ * 
+ * @param {string} title 
+ * @param {string} apiUrl 
  */
 export default function ParameterManager({ title, apiUrl }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Cargar los items al iniciar
+
   useEffect(() => {
     fetchItems();
-  }, [apiUrl]); // Se recarga si la URL de la API cambia
+  }, [apiUrl]); 
 
   const fetchItems = async () => {
     setLoading(true);
@@ -29,37 +29,37 @@ export default function ParameterManager({ title, apiUrl }) {
     }
   };
 
-  // Crear un nuevo item
+
   const handleCreate = async () => {
-    const nombre = window.prompt(`Nuevo nombre para ${title.slice(0, -1)}:`); // "Tipos de Parto" -> "Tipos de Parto"
+    const nombre = window.prompt(`Nuevo nombre para ${title.slice(0, -1)}:`); 
     if (nombre) {
       try {
         await apiClient.post(apiUrl, { nombre: nombre, activo: true });
-        fetchItems(); // Recargar la lista
+        fetchItems(); 
       } catch (err) {
         alert('Error al crear el ítem. ¿Quizás ya existe?');
       }
     }
   };
 
-  // Editar un item
+
   const handleEdit = async (item) => {
     const nombre = window.prompt('Nuevo nombre:', item.nombre);
     if (nombre && nombre !== item.nombre) {
       try {
         await apiClient.put(`${apiUrl}${item.id}/`, { ...item, nombre: nombre });
-        fetchItems(); // Recargar la lista
+        fetchItems(); 
       } catch (err) {
         alert('Error al actualizar el ítem.');
       }
     }
   };
   
-  // Activar/Desactivar un item
+
   const handleToggleActive = async (item) => {
     try {
       await apiClient.patch(`${apiUrl}${item.id}/`, { activo: !item.activo });
-      fetchItems(); // Recargar la lista
+      fetchItems(); 
     } catch (err) {
       alert('Error al cambiar el estado.');
     }
@@ -68,7 +68,6 @@ export default function ParameterManager({ title, apiUrl }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        {/* 1. REFACTOR: text-white -> text-primary */}
         <h2 className="text-2xl font-bold text-primary">{title}</h2>
         <button
           onClick={handleCreate}
@@ -78,17 +77,11 @@ export default function ParameterManager({ title, apiUrl }) {
           Añadir Nuevo
         </button>
       </div>
-
-      {/* Tabla de Parámetros */}
       <div className="mt-4 flow-root">
-        {/* 2. REFACTOR: ring-black ring-opacity-5 -> ring-border */}
         <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
-          {/* 3. REFACTOR: divide-gray-700 -> divide-border */}
           <table className="min-w-full divide-y divide-border">
-            {/* 4. REFACTOR: bg-gray-800 -> bg-surface */}
             <thead className="bg-surface">
               <tr>
-                {/* 5. REFACTOR: text-white -> text-primary */}
                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-primary sm:pl-6">Nombre</th>
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-primary">Estado</th>
                 <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -96,11 +89,9 @@ export default function ParameterManager({ title, apiUrl }) {
                 </th>
               </tr>
             </thead>
-            {/* 6. REFACTOR: divide-gray-800 -> divide-border, bg-gray-900 -> bg-surface */}
             <tbody className="divide-y divide-border bg-surface">
               {loading && (
                 <tr>
-                  {/* 7. REFACTOR: text-gray-400 -> text-secondary */}
                   <td colSpan="3" className="py-4 text-center text-secondary">Cargando...</td>
                 </tr>
               )}
@@ -109,9 +100,7 @@ export default function ParameterManager({ title, apiUrl }) {
               )}
               {!loading && items.map((item) => (
                 <tr key={item.id}>
-                  {/* 8. REFACTOR: text-white -> text-primary */}
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-primary sm:pl-6">{item.nombre}</td>
-                  {/* 9. REFACTOR: text-gray-300 -> text-secondary */}
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-secondary">
                     <button
                       onClick={() => handleToggleActive(item)}
@@ -133,7 +122,6 @@ export default function ParameterManager({ title, apiUrl }) {
                       <PencilIcon className="h-5 w-5" />
                       <span className="sr-only">Editar</span>
                     </button>
-                    {/* El borrado (DELETE) se omite por seguridad, es mejor desactivar (PATCH) */}
                   </td>
                 </tr>
               ))}

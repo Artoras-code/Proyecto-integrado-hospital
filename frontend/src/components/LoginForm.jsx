@@ -28,7 +28,6 @@ function LoginForm({ onSubmit, isLoading, error }) {
           id="username"
           type="text"
           required
-          // ¡CAMBIO! focus:ring/border-accent-mint
           className="w-full px-3 py-2 mt-1 border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-accent-mint focus:border-accent-mint"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -46,7 +45,6 @@ function LoginForm({ onSubmit, isLoading, error }) {
           id="password"
           type="password"
           required
-          // ¡CAMBIO! focus:ring/border-accent-mint
           className="w-full px-3 py-2 mt-1 border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-accent-mint focus:border-accent-mint"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -54,7 +52,6 @@ function LoginForm({ onSubmit, isLoading, error }) {
         />
       </div>
       <div>
-        {/* ¡CAMBIO! Botón bg-accent-mint */}
         <button 
           type="submit" 
           className="w-full px-4 py-2 font-medium text-white bg-accent-mint rounded-md hover:bg-accent-mint-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-mint focus:ring-offset-background disabled:opacity-50"

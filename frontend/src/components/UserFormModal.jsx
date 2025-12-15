@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// Opciones de Roles
+
 const ROL_CHOICES = [
   { value: 'admin', label: 'Administrador' },
   { value: 'supervisor', label: 'Supervisor' },
@@ -9,7 +9,6 @@ const ROL_CHOICES = [
 ];
 
 export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
-  // Estados del formulario
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -22,7 +21,7 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
   });
   const [error, setError] = useState('');
 
-  // Efecto para cargar datos al editar o resetear al crear
+
   useEffect(() => {
     if (userToEdit) {
       setFormData({
@@ -51,24 +50,22 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
     setError('');
   }, [isOpen, userToEdit]);
 
-  // Manejador de cambios en los inputs
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Manejador del envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    // 1. Validación básica
+
     if (!formData.username) {
       setError('El nombre de usuario es obligatorio.');
       return;
     }
 
-    // 2. Validación de Contraseñas
     if (!userToEdit || formData.password) {
       if (!formData.password && !userToEdit) {
          setError('La contraseña es obligatoria para nuevos usuarios.');
@@ -84,11 +81,9 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
       }
     }
     
-    // Preparar datos para enviar (quitando confirmPassword)
+
     const dataToSend = { ...formData };
     delete dataToSend.confirmPassword;
-
-    // Si la contraseña está vacía en edición, no la enviamos
     if (!dataToSend.password) {
         delete dataToSend.password;
     }
@@ -99,19 +94,12 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
   if (!isOpen) return null;
 
   const isEditing = !!userToEdit;
-
-  // Clases de estilo reutilizables para los inputs
   const inputClasses = "mt-2 block w-full rounded-lg border-gray-600 bg-gray-900/50 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm transition duration-200 ease-in-out hover:border-gray-500";
   const labelClasses = "block text-sm font-medium text-gray-300";
 
   return (
-    // Overlay con fondo oscuro y desenfoque más pronunciado
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 transition-opacity">
-      
-      {/* Contenedor del Modal: bordes más redondeados, sombra más suave, borde sutil */}
       <div className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-gray-800 border border-gray-700 p-8 shadow-2xl transition-all">
-        
-        {/* Encabezado */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white tracking-tight">
             {isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
@@ -124,7 +112,6 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Mensaje de Error */}
           {error && (
             <div className="rounded-lg border border-red-500/50 bg-red-900/30 p-4 text-sm text-red-200 animate-pulse">
               <div className="flex items-center">
@@ -136,7 +123,6 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
             </div>
           )}
 
-          {/* Sección: Datos Principales */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="username" className={labelClasses}>Nombre de Usuario *</label>
@@ -164,8 +150,7 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
               />
             </div>
           </div>
-          
-          {/* Sección: Datos Personales */}
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="first_name" className={labelClasses}>Nombre</label>
@@ -190,8 +175,7 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
               />
             </div>
           </div>
-          
-          {/* Sección: Identificación y Rol */}
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
              <div>
               <label htmlFor="rut" className={labelClasses}>RUT</label>
@@ -221,7 +205,6 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
             </div>
           </div>
           
-          {/* Sección: Seguridad (Agrupada visualmente) */}
           <div className="rounded-xl border border-gray-700 bg-gray-900/30 p-5">
             <h3 className="text-lg font-medium text-white mb-4">Seguridad y Acceso</h3>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -259,8 +242,6 @@ export default function UserFormModal({ isOpen, onClose, onSave, userToEdit }) {
               </div>
             </div>
           </div>
-
-          {/* Botones de Acción */}
           <div className="mt-8 flex justify-end space-x-4 pt-4 border-t border-gray-700">
             <button
               type="button"

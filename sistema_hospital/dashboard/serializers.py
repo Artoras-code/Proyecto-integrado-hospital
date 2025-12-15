@@ -16,7 +16,7 @@ class TipoAnalgesiaSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoAnalgesia
         fields = '__all__'
-# -------------------------------------------------------
+
 
 class MadreSerializer(serializers.ModelSerializer):
     class Meta:

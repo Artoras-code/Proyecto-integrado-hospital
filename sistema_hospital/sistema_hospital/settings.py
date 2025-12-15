@@ -4,26 +4,24 @@ from decouple import config
 import dj_database_url
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- SEGURIDAD ---
-# Lee la clave del entorno (Render), si no busca en .env (Local), si no usa la insegura (Solo dev)
 SECRET_KEY = os.environ.get('SECRET_KEY', config('SECRET_KEY', default='django-insecure-dev-key'))
 
-# En producción (Render) DEBUG será False. En local será True (si no existe la variable RENDER).
+
 DEBUG = 'RENDER' not in os.environ
 
-# Configuración de Hosts permitidos
+
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1').split(',')
 
-# Agregar automáticamente el host que asigne Render
+
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
-# --- APLICACIONES INSTALADAS ---
+# --- APP INSTALADAS ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,7 +35,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     
-    # Tus aplicaciones
+    # App
     'cuentas',
     'dashboard',
     'auditoria',
@@ -51,7 +49,7 @@ INSTALLED_APPS = [
 
 # --- MIDDLEWARE ---
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',                   # CORS debe ir al principio
+    'corsheaders.middleware.CorsMiddleware',                   # CORS 
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',              # WhiteNoise para archivos estáticos
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -84,10 +82,8 @@ WSGI_APPLICATION = 'sistema_hospital.wsgi.application'
 
 
 # --- BASE DE DATOS ---
-# Usa la base de datos de Render (PostgreSQL) en producción, o SQLite en local
 DATABASES = {
     'default': dj_database_url.config(
-        # Busca la variable DATABASE_URL. Si no la encuentra, usa sqlite local.
         default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
         conn_max_age=600
     )
@@ -123,7 +119,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 if not DEBUG:
-    # Configuración para producción (Render)
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -151,5 +146,4 @@ SIMPLE_JWT = {
 # --- CORS (Conexión con Frontend) ---
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Si tienes problemas de conexión al principio, puedes descomentar esto temporalmente:
-# CORS_ALLOW_ALL_ORIGINS = True
+

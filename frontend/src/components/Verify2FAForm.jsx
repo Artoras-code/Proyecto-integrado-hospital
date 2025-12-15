@@ -35,7 +35,6 @@ function Verify2FAForm({ onSubmit, onBack, isLoading, error }) {
           pattern="\d{6}"
           maxLength="6"
           required
-          // ¡CAMBIO! focus:ring/border-accent-mint
           className="w-full px-3 py-2 mt-1 text-center tracking-widest border border-border bg-surface text-primary rounded-md shadow-sm focus:outline-none focus:ring-accent-mint focus:border-accent-mint"
           value={otpToken}
           onChange={(e) => setOtpToken(e.target.value)}
@@ -43,7 +42,6 @@ function Verify2FAForm({ onSubmit, onBack, isLoading, error }) {
         />
       </div>
       <div>
-        {/* ¡CAMBIO! Botón bg-accent-mint */}
         <button 
           type="submit" 
           className="w-full px-4 py-2 font-medium text-white bg-accent-mint rounded-md hover:bg-accent-mint-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-mint focus:ring-offset-background disabled:opacity-50"
@@ -53,7 +51,6 @@ function Verify2FAForm({ onSubmit, onBack, isLoading, error }) {
         </button>
       </div>
       <div className="text-center">
-        {/* ¡CAMBIO! Enlace text-accent-mint */}
         <button 
           type="button" 
           onClick={onBack}

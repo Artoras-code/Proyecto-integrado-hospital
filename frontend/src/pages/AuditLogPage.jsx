@@ -21,7 +21,6 @@ export default function AuditLogPage() {
             <select
               id="tabs"
               name="tabs"
-              // ¡CORREGIDO!
               className="block w-full rounded-md border-border bg-surface text-primary focus:border-accent-mint focus:ring-accent-mint"
               onChange={(e) => setActiveTab(e.target.value)}
               value={activeTab}
@@ -37,7 +36,6 @@ export default function AuditLogPage() {
                 className={classNames(
                   activeTab === 'sesiones'
                     ? 'bg-accent-mint/10 text-accent-mint'
-                    // ¡CORREGIDO!
                     : 'text-secondary hover:text-primary',
                   'rounded-md px-3 py-2 text-sm font-medium'
                 )}
@@ -49,7 +47,6 @@ export default function AuditLogPage() {
                 className={classNames(
                   activeTab === 'acciones'
                     ? 'bg-accent-mint/10 text-accent-mint'
-                    // ¡CORREGIDO!
                     : 'text-secondary hover:text-primary',
                   'rounded-md px-3 py-2 text-sm font-medium'
                 )}

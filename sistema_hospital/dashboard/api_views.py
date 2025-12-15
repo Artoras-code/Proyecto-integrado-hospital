@@ -44,7 +44,7 @@ from .serializers import (
     SolicitudCorreccionSerializer
 )
 
-# --- VIEWSETS (Se mantienen igual) ---
+
 
 class TipoPartoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = TipoParto.objects.all().order_by('nombre')
@@ -198,41 +198,34 @@ class SolicitudCorreccionViewSet(AuditoriaMixin, viewsets.ReadOnlyModelViewSet):
             return Response(SolicitudCorreccionSerializer(sol).data)
         return Response({"error": "Ya estaba resuelta."}, status=400)
 
-# --- LÓGICA DE REPORTES REM ACTUALIZADA ---
+
 
 def calcular_datos_rem(fecha_inicio, fecha_fin):
-    # Filtros base
     partos_q = RegistroParto.objects.filter(fecha_parto__range=(fecha_inicio, fecha_fin))
     rn_q = RecienNacido.objects.filter(parto_asociado__in=partos_q)
-    
-    # Filtro de mortalidad (independiente de si nacieron en este periodo, se reporta el evento)
     madres_fallecidas_q = Madre.objects.filter(fallecida=True, fecha_fallecimiento__range=(fecha_inicio, fecha_fin))
     rn_fallecidos_q = RecienNacido.objects.filter(fallecido=True, fecha_fallecimiento__range=(fecha_inicio, fecha_fin))
-
-    # --- SECCIÓN A: PARTOS Y GESTACIÓN ---
     seccion_a = partos_q.aggregate(
         total_partos=Count('id'),
         vaginal_espontaneo=Count('id', filter=Q(tipo_parto__nombre__icontains='Espontáneo')),
         vaginal_instrumental=Count('id', filter=Q(tipo_parto__nombre__icontains='Instrumental')),
         cesarea_electiva=Count('id', filter=Q(tipo_parto__nombre='Cesárea Electiva')),
         cesarea_urgencia=Count('id', filter=Q(tipo_parto__nombre='Cesárea de Urgencia')),
-        # Condiciones
         con_oxitocina=Count('id', filter=Q(uso_oxitocina=True)),
         con_ligadura_tardia=Count('id', filter=Q(ligadura_tardia_cordon=True)),
         con_piel_a_piel=Count('id', filter=Q(contacto_piel_a_piel=True)),
-        # Edad Gestacional
         pretermino=Count('id', filter=Q(edad_gestacional_semanas__lt=37)),
         termino=Count('id', filter=Q(edad_gestacional_semanas__gte=37, edad_gestacional_semanas__lte=41)),
         posttermino=Count('id', filter=Q(edad_gestacional_semanas__gte=42)),
     )
 
-    # --- DEMOGRAFÍA MATERNA (Cálculo manual por simplicidad en fechas) ---
+
     madres_ids = partos_q.values_list('madre_id', flat=True)
     madres = Madre.objects.filter(id__in=madres_ids)
     
-    adolescente = 0 # < 18
-    adulta = 0      # 18 - 34
-    anosa = 0       # >= 35
+    adolescente = 0 
+    adulta = 0      
+    anosa = 0       
     year_actual = fecha_inicio.year
 
     for m in madres:
@@ -250,14 +243,14 @@ def calcular_datos_rem(fecha_inicio, fecha_fin):
         'pueblo_originario': madres.filter(pertenece_pueblo_originario=True).count()
     }
 
-    # --- SECCIÓN D.1: PESO Y SEXO RN ---
+
     seccion_d1 = rn_q.aggregate(
         total_rn=Count('id'),
         peso_menor_1500=Count('id', filter=Q(peso_grs__lt=1500)), # Agrupado crítico
         peso_1500_2499=Count('id', filter=Q(peso_grs__gte=1500, peso_grs__lte=2499)),
         peso_2500_3999=Count('id', filter=Q(peso_grs__gte=2500, peso_grs__lte=3999)),
         peso_mayor_4000=Count('id', filter=Q(peso_grs__gte=4000)),
-        # Detalle fino para tabla
+
         p_lt_500=Count('id', filter=Q(peso_grs__lt=500)),
         p_500_999=Count('id', filter=Q(peso_grs__gte=500, peso_grs__lte=999)),
         p_1000_1499=Count('id', filter=Q(peso_grs__gte=1000, peso_grs__lte=1499)),
@@ -273,23 +266,20 @@ def calcular_datos_rem(fecha_inicio, fecha_fin):
         sexo_i=Count('id', filter=Q(sexo='I')),
     )
 
-    # --- SECCIÓN D.2: ATENCIÓN INMEDIATA ---
+
     seccion_d2 = rn_q.aggregate(
         profilaxis_ocular=Count('id', filter=Q(profilaxis_ocular=True)),
         profilaxis_hepb=Count('id', filter=Q(vacuna_hepatitis_b=True)),
-        # Tipo parto desde perspectiva RN (pueden ser gemelos con distinto resultado teorico, aunque raro)
         rn_vaginal=Count('id', filter=Q(parto_asociado__tipo_parto__nombre__icontains='Espontáneo')),
         rn_instrumental=Count('id', filter=Q(parto_asociado__tipo_parto__nombre__icontains='Instrumental')),
         rn_cesarea=Count('id', filter=Q(parto_asociado__tipo_parto__nombre__icontains='Cesárea')),
-        # Apgar
         apgar_1_critico=Count('id', filter=Q(apgar_1_min__lte=3)),
         apgar_5_critico=Count('id', filter=Q(apgar_5_min__lte=6)),
-        # Reanimacion
         reanimacion_basica=Count('id', filter=Q(reanimacion='basica')),
         reanimacion_avanzada=Count('id', filter=Q(reanimacion='avanzada')),
     )
 
-    # --- SECCIÓN E: ALIMENTACIÓN ---
+
     es_migrante = ~Q(parto_asociado__madre__nacionalidad='Chilena') & Q(parto_asociado__madre__nacionalidad__isnull=False)
     es_pueblo = Q(parto_asociado__madre__pertenece_pueblo_originario=True)
 
@@ -305,7 +295,6 @@ def calcular_datos_rem(fecha_inicio, fecha_fin):
         formula_pueblo=Count('id', filter=Q(alimentacion_alta='Formula') & es_pueblo),
     )
 
-    # --- MORTALIDAD ---
     seccion_mortalidad = {
         'materna': madres_fallecidas_q.count(),
         'neonatal': rn_fallecidos_q.count()
@@ -330,7 +319,6 @@ class ReporteREMView(APIView):
         except: return Response({"error": "Fechas inválidas"}, 400)
 
         data = calcular_datos_rem(fi, ff)
-        # Desempaquetamos data que ya viene con la estructura correcta ('a', 'd1', etc.)
         return Response({
             "rango_fechas": {"inicio": request.query_params.get('fecha_inicio'), "fin": request.query_params.get('fecha_fin')},
             "seccion_a": data['a'],
@@ -341,12 +329,11 @@ class ReporteREMView(APIView):
             "seccion_mortalidad": data['mort']
         })
 
-# --- PDF MEJORADO Y PROFESIONAL ---
+
 class ExportReporteREMPDFView(APIView):
     permission_classes = [IsAuthenticated, IsSupervisorUser]
 
     def get(self, request, *args, **kwargs):
-        # 1. Validar fechas
         try:
             f_inicio_str = request.query_params.get('fecha_inicio')
             f_fin_str = request.query_params.get('fecha_fin')
@@ -355,32 +342,27 @@ class ExportReporteREMPDFView(APIView):
         except (ValueError, TypeError):
             return Response({"error": "Fechas inválidas o no proporcionadas"}, 400)
 
-        # 2. Obtener Datos
+
         data = calcular_datos_rem(fi, ff)
-        
-        # 3. Configurar PDF (Formato CARTA VERTICAL)
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
-            pagesize=letter, # Vertical estándar
+            pagesize=letter,
             rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50
         )
         
         elements = []
         styles = getSampleStyleSheet()
-        
-        # --- Estilos Personalizados "Tipo Informe" ---
-        # Título Principal
         style_title = ParagraphStyle(
             'ReportTitle', 
             parent=styles['Heading1'], 
             fontSize=16, 
             alignment=TA_CENTER, 
-            textColor=colors.HexColor('#1a237e'), # Azul oscuro institucional
+            textColor=colors.HexColor('#1a237e'), 
             spaceAfter=10
         )
         
-        # Subtítulos de Sección
+
         style_section = ParagraphStyle(
             'SectionHeader', 
             parent=styles['Heading2'], 
@@ -391,43 +373,34 @@ class ExportReporteREMPDFView(APIView):
             borderPadding=5,
             borderColor=colors.HexColor('#e0e0e0'),
             borderWidth=0,
-            backColor=None # Sin fondo, más limpio
+            backColor=None 
         )
 
-        # Texto normal para celdas
         style_cell_header = ParagraphStyle('HeaderCell', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', textColor=colors.HexColor('#1a237e'), alignment=TA_LEFT)
         style_cell_data = ParagraphStyle('DataCell', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=TA_LEFT)
         style_cell_num = ParagraphStyle('NumCell', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=TA_CENTER)
 
-        # --- FUNCIÓN AUXILIAR PARA ESTILOS DE TABLA LIMPIOS ---
+
         def get_clean_table_style():
             return TableStyle([
                 ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                ('LINEBELOW', (0,0), (-1,0), 1.5, colors.HexColor('#1a237e')), # Línea gruesa bajo encabezado
-                ('LINEBELOW', (0,1), (-1,-1), 0.5, colors.lightgrey), # Líneas finas entre filas
+                ('LINEBELOW', (0,0), (-1,0), 1.5, colors.HexColor('#1a237e')), 
+                ('LINEBELOW', (0,1), (-1,-1), 0.5, colors.lightgrey),
                 ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#1a237e')),
                 ('BOTTOMPADDING', (0,0), (-1,-1), 6),
                 ('TOPPADDING', (0,0), (-1,-1), 6),
             ])
 
-        # --- ENCABEZADO ---
-        # Logo o Texto institucional simple y elegante
+
         elements.append(Paragraph("SERVICIO DE SALUD ÑUBLE", styles['Normal']))
         elements.append(Paragraph("<b>HOSPITAL CLÍNICO HERMINDA MARTÍN</b>", styles['Normal']))
         elements.append(Spacer(1, 20))
-        
         elements.append(Paragraph("INFORME ESTADÍSTICO REM A.24", style_title))
         elements.append(Paragraph(f"Periodo de Análisis: {f_inicio_str} al {f_fin_str}", ParagraphStyle('Sub', parent=styles['Normal'], alignment=TA_CENTER)))
         elements.append(Spacer(1, 10))
         elements.append(HRFlowable(width="100%", thickness=1, color=colors.lightgrey))
         elements.append(Spacer(1, 20))
-
-        # ---------------------------------------------------------------------
-        # 1. RESUMEN EJECUTIVO
-        # ---------------------------------------------------------------------
         elements.append(Paragraph("I. Resumen Ejecutivo y Demografía", style_section))
-        
-        # Tabla simple de 2 columnas para KPIs
         d_resumen = [
             [Paragraph('Indicador Clave', style_cell_header), Paragraph('Valor', style_cell_header)],
             ['Total de Partos Registrados', data['a']['total_partos']],
@@ -438,32 +411,23 @@ class ExportReporteREMPDFView(APIView):
             ['Mortalidad Neonatal en Periodo', data['mort']['neonatal']],
         ]
         
-        # Usamos anchos relativos a carta (aprox 500pt ancho útil)
+
         t_resumen = Table(d_resumen, colWidths=[350, 150])
         t_resumen.setStyle(get_clean_table_style())
         elements.append(t_resumen)
         elements.append(Spacer(1, 20))
-
-        # ---------------------------------------------------------------------
-        # SECCIÓN A: PARTO Y GESTACIÓN
-        # ---------------------------------------------------------------------
         elements.append(Paragraph("II. Caracterización del Parto", style_section))
-        
-        # Para que no se vea ancho, dividimos conceptualmente: Tipos vs Condiciones
         d_seccion_a = [
             [Paragraph('Tipo de Parto / Condición', style_cell_header), Paragraph('Cantidad', style_cell_header)],
-            # Grupo Partos
             [Paragraph('<b>Por Vía del Parto</b>', style_cell_data), ''],
             ['   - Parto Vaginal Espontáneo', data['a']['vaginal_espontaneo']],
             ['   - Parto Vaginal Instrumental', data['a']['vaginal_instrumental']],
             ['   - Cesárea Electiva', data['a']['cesarea_electiva']],
             ['   - Cesárea de Urgencia', data['a']['cesarea_urgencia']],
-            # Grupo Condiciones
             [Paragraph('<b>Condiciones Clínicas</b>', style_cell_data), ''],
             ['   - Uso de Oxitocina', data['a']['con_oxitocina']],
             ['   - Ligadura Tardía de Cordón', data['a']['con_ligadura_tardia']],
             ['   - Contacto Piel a Piel', data['a']['con_piel_a_piel']],
-            # Grupo Edad Gestacional
             [Paragraph('<b>Edad Gestacional</b>', style_cell_data), ''],
             ['   - Pretérmino (< 37 semanas)', data['a']['pretermino']],
             ['   - Post-término (> 42 semanas)', data['a']['posttermino']],
@@ -471,21 +435,13 @@ class ExportReporteREMPDFView(APIView):
         
         t_a = Table(d_seccion_a, colWidths=[350, 150])
         t_a.setStyle(get_clean_table_style())
-        # Estilo adicional para los subtítulos dentro de la tabla (negritas)
         t_a.setStyle(TableStyle([
-            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f5f5f5')), # Fondo sutil encabezado grupo
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f5f5f5')),
             ('BACKGROUND', (0,6), (-1,6), colors.HexColor('#f5f5f5')),
             ('BACKGROUND', (0,10), (-1,10), colors.HexColor('#f5f5f5')),
         ]))
         elements.append(t_a)
         elements.append(Spacer(1, 20))
-
-        # ---------------------------------------------------------------------
-        # SECCIÓN D.1: RECIÉN NACIDO (PESO)
-        # ---------------------------------------------------------------------
-        # Hacemos salto de página si queda poco espacio, opcional.
-        # elements.append(PageBreak()) 
-        
         elements.append(Paragraph("III. Estadísticas del Recién Nacido (Peso)", style_section))
         
         d_d1 = [
@@ -501,10 +457,6 @@ class ExportReporteREMPDFView(APIView):
         t_d1.setStyle(get_clean_table_style())
         elements.append(t_d1)
         elements.append(Spacer(1, 20))
-
-        # ---------------------------------------------------------------------
-        # SECCIÓN D.2: ATENCIÓN INMEDIATA
-        # ---------------------------------------------------------------------
         elements.append(Paragraph("IV. Atención Inmediata y Reanimación", style_section))
         
         d_d2 = [
@@ -522,13 +474,8 @@ class ExportReporteREMPDFView(APIView):
         t_d2.setStyle(get_clean_table_style())
         elements.append(t_d2)
         elements.append(Spacer(1, 20))
-        
-        # ---------------------------------------------------------------------
-        # SECCIÓN E: ALIMENTACIÓN
-        # ---------------------------------------------------------------------
         elements.append(Paragraph("V. Alimentación al Alta", style_section))
         
-        # Tabla compacta
         d_e = [
             [Paragraph('Tipo', style_cell_header), Paragraph('Total', style_cell_header), Paragraph('Migrantes', style_cell_header)],
             ['Lactancia Materna Exclusiva', data['e']['lme_total'], data['e']['lme_migrante']],
@@ -540,7 +487,6 @@ class ExportReporteREMPDFView(APIView):
         t_e.setStyle(get_clean_table_style())
         elements.append(t_e)
 
-        # Footer
         elements.append(Spacer(1, 40))
         elements.append(Paragraph("Documento generado automáticamente por Sistema de Gestión Hospitalaria.", ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)))
         elements.append(Paragraph(f"Fecha de emisión: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ParagraphStyle('FooterTime', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)))

@@ -29,10 +29,7 @@ import RegistroFormPage from './pages/RegistroFormPage';
 import EquiposPage from './pages/EquiposPage';
 import GestionPacientesPage from './pages/GestionPacientesPage'; 
 
-/**
- * Componente para redirigir al usuario a su dashboard
- * correcto después de iniciar sesión.
- */
+
 function DashboardRedirector() {
   const user = JSON.parse(localStorage.getItem('user'));
   
@@ -59,10 +56,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* 1. Ruta de Login (Pública) */}
         <Route path="/login" element={<LoginPage />} />
-
-        {/* 2. Rutas de ADMIN (Protegidas) */}
         <Route 
           path="/admin" 
           element={
@@ -77,7 +71,6 @@ function App() {
           <Route path="config" element={<ConfigPage />} />
         </Route>
 
-        {/* 3. Rutas de SUPERVISOR (Protegidas) */}
         <Route 
           path="/supervisor" 
           element={
@@ -96,7 +89,6 @@ function App() {
           <Route path="altas" element={<HistorialAltasPage />} />
         </Route>
 
-        {/* 4. Rutas de CLÍNICO (Protegidas) */}
         <Route 
           path="/clinico" 
           element={
@@ -112,7 +104,7 @@ function App() {
           <Route path="defunciones" element={<DefuncionesPage />} />
         </Route>
 
-        {/* 5. Redirección de la raíz ("/") */}
+
         <Route 
           path="/" 
           element={
@@ -122,7 +114,6 @@ function App() {
           } 
         />
         
-        {/* 6. Ruta "Catch-all" */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>

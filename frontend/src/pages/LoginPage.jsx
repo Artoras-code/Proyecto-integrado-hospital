@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [qrCodeData, setQrCodeData] = useState('');
 
-  // Estado para el modal de "Olvidé mi contraseña"
+
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotUsername, setForgotUsername] = useState('');
 
@@ -33,7 +33,6 @@ export default function LoginPage() {
         setStep('token');
       } else if (response.data.step === '2fa_setup_required') {
         try {
-          // URL corregida para coincidir con el backend
           const qrResponse = await apiClient.post('/cuentas/api/auth/setup-2fa/', { 
             username: credentials.username 
           });
@@ -57,7 +56,6 @@ export default function LoginPage() {
     localStorage.setItem('refreshToken', refresh);
     localStorage.setItem('user', JSON.stringify(user));
     
-    // Redirección inteligente según el rol
     if (user.rol === 'admin') {
         navigate('/admin/dashboard');
     } else if (user.rol === 'supervisor') {
@@ -89,7 +87,7 @@ export default function LoginPage() {
     setError('');
   };
 
-  // Manejador para enviar la solicitud de cambio de clave
+
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if(!forgotUsername) return;
@@ -100,8 +98,6 @@ export default function LoginPage() {
         setShowForgotModal(false);
         setForgotUsername('');
     } catch (err) {
-        // Por seguridad, a veces es mejor no decir si falló por usuario inexistente,
-        // pero aquí mostramos error genérico o del backend.
         alert("Error al enviar solicitud. Intente nuevamente.");
     }
   };
@@ -116,7 +112,6 @@ export default function LoginPage() {
                 isLoading={isLoading}
                 error={error}
             />
-            {/* Enlace para recuperar contraseña */}
             <div className="text-center mt-4">
                 <button 
                     onClick={() => setShowForgotModal(true)}
@@ -152,7 +147,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       
-      {/* MODAL OLVIDÉ CONTRASEÑA */}
+
       {showForgotModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-surface p-6 rounded-2xl shadow-xl w-full max-w-sm border border-border">
